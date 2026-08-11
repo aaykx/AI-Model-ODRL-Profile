@@ -1,0 +1,65 @@
+﻿@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  EmbargoedCorpusLicence  (Use Case 4)
+#  Models a TCD TARA embargoed preprint. RAG ingestion is prohibited until
+#  the embargo date passes. DSM Art. 3(1) requires "lawful access" — an
+#  active embargo makes access unlawful. W3C ODRL AI Vocab distinguishes
+#  RAG (odrl:ai-augment) from training (odrl:ai-training).
+#
+#  Expected compliance result:
+#    ✗ if current dateTime < EmbargoEndDate
+#    ✓ after embargo lapses
+#  Legal basis: DSM Art. 3(1) lawful access; TCD TARA embargo policy.
+# ─────────────────────────────────────────────────────────────────────────────
+
+<https://example.com/policy/EmbargoedCorpusLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "Embargoed Corpus Licence — Temporal Constraint on RAG Ingestion" ;
+    dct:description "Prohibits RAG ingestion and AI training of an embargoed repository record before the EmbargoEndDate. Access becomes lawful only after the embargo lapses, per DSM Art. 3(1) lawful access precondition." ;
+    dct:created "2026-06-30"^^xsd:date ;
+
+    # ── PERMISSION: RAG ingestion only after embargo lapses ─────────────────
+    odrl:permission [
+        odrl:target   <https://example.com/assets/EmbargoedPreprint> ;
+        odrl:assigner <https://example.com/TCD-TARA> ;
+        odrl:action   aimd2:RAGIngestion ;
+
+        # Allowed only on or after the EmbargoEndDate
+        odrl:constraint [
+            odrl:leftOperand  odrl:dateTime ;
+            odrl:operator     odrl:gteq ;
+            odrl:rightOperand aimd2:EmbargoEndDate ;
+        ] ;
+
+        odrl:duty [
+            odrl:action aimd2:ComplyWithArticle50 ;
+        ] ;
+    ] ;
+
+    # ── PROHIBITION: RAG ingestion before embargo end ────────────────────────
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/EmbargoedPreprint> ;
+        odrl:action  aimd2:RAGIngestion ;
+        odrl:constraint [
+            odrl:leftOperand  odrl:dateTime ;
+            odrl:operator     odrl:lt ;
+            odrl:rightOperand aimd2:EmbargoEndDate ;
+        ] ;
+    ] ;
+
+    # ── PROHIBITION: AI training before embargo end ──────────────────────────
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/EmbargoedPreprint> ;
+        odrl:action  aimd2:AITraining ;
+        odrl:constraint [
+            odrl:leftOperand  odrl:dateTime ;
+            odrl:operator     odrl:lt ;
+            odrl:rightOperand aimd2:EmbargoEndDate ;
+        ] ;
+    ] .

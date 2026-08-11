@@ -1,0 +1,64 @@
+﻿@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix cc:    <http://creativecommons.org/ns#> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CopyleftPropagationLicence  (Use Case 3)
+#  Models CC-BY-SA 4.0 applied to a training corpus. ShareAlike §3(b)
+#  requires derivative AI models to be released under an identical or
+#  compatible licence. Jewitt et al. (2025) found 35.5 % of model→app
+#  transitions strip this clause — this policy formally encodes the
+#  propagation obligation so the checker can detect that failure.
+#
+#  Expected compliance result: ✗ if downstream licence is incompatible or absent
+#  Legal basis: CC-BY-SA 4.0 §3(b) ShareAlike; Andersen v. Stability AI.
+# ─────────────────────────────────────────────────────────────────────────────
+
+<https://example.com/policy/CopyleftPropagationLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "CC-BY-SA Copyleft Propagation Licence — ShareAlike Obligation on Trained Models" ;
+    dct:description "Permits fine-tuning and model derivation from a CC-BY-SA corpus. The ShareAlike obligation (§3(b)) requires the downstream model licence to be identical or compatible. Absence or incompatibility of the downstream licence URI is a compliance failure." ;
+    dct:created "2026-06-30"^^xsd:date ;
+    dct:references <https://creativecommons.org/licenses/by-sa/4.0/> ;
+
+    # ── PERMISSION: fine-tuning with copyleft propagation ───────────────────
+    odrl:permission [
+        odrl:target   <https://example.com/assets/SACorpus> ;
+        odrl:assigner <https://example.com/CorpusOwner> ;
+        odrl:action   aimd2:FineTuning ;
+
+        # Downstream licence must be CC-BY-SA-compatible
+        odrl:constraint [
+            odrl:leftOperand  aimd2:downstreamLicence ;
+            odrl:operator     odrl:isA ;
+            odrl:rightOperand <https://example.com/policy/CopyleftPropagationLicence> ;
+        ] ;
+
+        # ── Obligations ──────────────────────────────────────────────────────
+        odrl:duty [
+            odrl:action aimd2:InheritSourceLicence ;   # must carry SA licence downstream
+        ] ;
+        odrl:duty [
+            odrl:action aimd2:ModelSharing ;            # OSAID: weights must be shared
+        ] ;
+        odrl:duty [
+            odrl:action aimd2:InheritSourceProhibitions ; # prohibited uses must propagate
+        ] ;
+    ] ;
+
+    # ── PROHIBITION: relicensing to incompatible or proprietary licence ──────
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/SACorpus> ;
+        odrl:action  aimd2:ModelSharing ;
+        odrl:constraint [
+            odrl:leftOperand  aimd2:downstreamLicence ;
+            odrl:operator     odrl:neq ;
+            odrl:rightOperand <https://example.com/policy/CopyleftPropagationLicence> ;
+        ] ;
+    ] ;
+
+    aimd2:propagatesObligationTo <https://example.com/policy/CopyleftPropagationLicence> .

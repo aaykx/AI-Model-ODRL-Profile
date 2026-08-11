@@ -1,0 +1,60 @@
+﻿@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  AGPLNetworkLicence  (Use Case 8)
+#  Models AGPLv3 applied to a fine-tuned model deployed as a network API.
+#  AGPLv3 §13 is unique among OSS licences: network use — not just
+#  distribution — triggers the copyleft obligation to offer source.
+#  Black Duck OSSRA classifies AGPL as the "network copyleft" tier.
+#
+#  Expected compliance result: ✗ if network API deployment does NOT offer source
+#  Legal basis: AGPLv3 §13; Black Duck OSSRA four-tier risk classification.
+# ─────────────────────────────────────────────────────────────────────────────
+
+<https://example.com/policy/AGPLNetworkLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "AGPLv3 Network Copyleft Licence — Source Disclosure on Network Use" ;
+    dct:description "AGPLv3 §13 requires that any user who interacts with a covered program over a network must be offered the corresponding source code. For AI models this means: deploying as an API (deploymentContext=network) triggers the same copyleft obligation as distribution, which most standard copyleft checks miss." ;
+    dct:created "2026-06-30"^^xsd:date ;
+    dct:references <https://www.gnu.org/licenses/agpl-3.0.html> ;
+
+    # ── PERMISSION: use and share (with copyleft duty) ───────────────────────
+    odrl:permission [
+        odrl:target   <https://example.com/assets/AGPLFineTunedModel> ;
+        odrl:assigner <https://example.com/AGPLModelPublisher> ;
+        odrl:action   aimd2:AIInference ;
+
+        # ── AGPLv3 §13 network-use copyleft trigger ──────────────────────────
+        odrl:constraint [
+            odrl:leftOperand  aimd2:deploymentContext ;
+            odrl:operator     odrl:eq ;
+            odrl:rightOperand <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#NetworkDeployment> ;
+        ] ;
+
+        # Obligation: must publish source when deployed on network
+        odrl:duty [
+            odrl:action aimd2:ModelSharing ;          # source / weights disclosure
+        ] ;
+        odrl:duty [
+            odrl:action aimd2:InheritSourceLicence ;  # downstream also AGPL
+        ] ;
+    ] ;
+
+    # ── PROHIBITION: network deployment without source disclosure ────────────
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/AGPLFineTunedModel> ;
+        odrl:action  aimd2:AIInference ;
+        odrl:constraint [
+            odrl:leftOperand  aimd2:deploymentContext ;
+            odrl:operator     odrl:eq ;
+            odrl:rightOperand <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#NetworkDeployment> ;
+        ] ;
+        # Prohibition fires when modelWeightsURL is absent (source not disclosed)
+    ] ;
+
+    aimd2:propagatesObligationTo <https://example.com/policy/AGPLNetworkLicence> .

@@ -1,0 +1,588 @@
+﻿@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix dcat:  <https://www.w3.org/ns/dcat#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AIMD v2.0 — SHACL Constraint Shapes
+#
+#  Validates AIMD_v2_knowledge_graph.ttl (or a GraphDB repository loaded with
+#  the same triples) against the obligations defined in AIMD_extended_v2.ttl.
+#
+#  Severity levels:
+#   sh:Violation  — hard compliance failure; maps to checker returning compliant=false
+#   sh:Warning    — soft gap; maps to checker returning conflict entry but compliant=true
+#   sh:Info       — evidence recommended but not legally mandated
+#
+#  Validation approach:
+#   1. Simple property shapes — require specific predicates on distribution nodes
+#   2. sh:SPARQLConstraint shapes — cross-node graph pattern checks that mirror
+#      the logic in the 11 checker functions in server_v2.js
+#
+#  To validate with Apache Jena SHACL CLI:
+#    shacl validate --shapes AIMD_v2_shapes.ttl --data AIMD_v2_knowledge_graph.ttl
+#
+#  To validate in GraphDB:
+#    POST /rest/repositories/AIModels/shacl/validate with body:
+#      { "shapesGraphUri": "<graph-iri-where-shapes-loaded>" }
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── Shapes graph declaration ─────────────────────────────────────────────────
+<https://example.com/shapes/AIMD-v2>
+    a owl:Ontology ;
+    rdfs:label "AIMD v2.0 SHACL Shapes"@en ;
+    rdfs:comment "Machine-readable constraints for the AIMD Extended Profile v2.0 (MAI dissertation, TCD 2026)"@en ;
+    owl:imports <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> ;
+    dct:creator <https://github.com/aaykx> ;
+    dct:issued "2026-06-30"^^xsd:date .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 1 — BASE DISTRIBUTION SHAPES
+# Every dcat:Distribution that participates in an AIMD chain must carry
+# minimal provenance metadata.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+aimd2:AIModelDistributionShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:Distribution ;
+    rdfs:label "Base AI Model Distribution Shape"@en ;
+    rdfs:comment "Every AIMD distribution node must declare a licence, an access URL, and an issued date."@en ;
+
+    sh:property [
+        sh:path dct:license ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Violation ;
+        sh:message "Distribution is missing dct:license — cannot perform any compliance check."@en ;
+    ] ;
+
+    sh:property [
+        sh:path dcat:accessURL ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Violation ;
+        sh:message "Distribution is missing dcat:accessURL — provenance chain is incomplete."@en ;
+    ] ;
+
+    sh:property [
+        sh:path dct:issued ;
+        sh:minCount 1 ;
+        sh:severity sh:Warning ;
+        sh:message "Distribution is missing dct:issued — temporal embargo checks may be unreliable."@en ;
+    ] ;
+
+    sh:property [
+        sh:path odrl:hasPolicy ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Warning ;
+        sh:message "Distribution has no odrl:hasPolicy link — checker functions cannot locate ODRL obligations."@en ;
+    ] .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 2 — TRAINING EVIDENCE SHAPES
+# Distributions with aimd2:trainingDatasetURL declare themselves as AI training
+# artefacts and must carry a model weights URL and an Art. 50 disclosure.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+aimd2:TrainingDistributionShape
+    a sh:NodeShape ;
+    sh:targetSubjectsOf aimd2:trainingDatasetURL ;
+    rdfs:label "AI Training Distribution Shape"@en ;
+    rdfs:comment "Distributions that carry aimd2:trainingDatasetURL are training artefacts and must evidence model weights and EU AI Act Art. 50 compliance."@en ;
+
+    sh:property [
+        sh:path aimd2:modelWeightsURL ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Warning ;
+        sh:message "Training distribution is missing aimd2:modelWeightsURL — AGPL §13 network trigger cannot be fully assessed and OSAID ModelSharing obligation may be unmet."@en ;
+    ] ;
+
+    sh:property [
+        sh:path aimd2:article50PolicyURL ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Violation ;
+        sh:message "Training distribution is missing aimd2:article50PolicyURL — EU AI Act Art. 53(1)(c) GPAI transparency obligation is unmet."@en ;
+    ] ;
+
+    sh:property [
+        sh:path aimd2:downstreamLicenceURI ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Warning ;
+        sh:message "Training distribution is missing aimd2:downstreamLicenceURI — copyleft propagation (UC-3, UC-7) cannot be verified."@en ;
+    ] .
+
+# ── Fine-tuning sub-shape ────────────────────────────────────────────────────
+aimd2:FineTuningDistributionShape
+    a sh:NodeShape ;
+    sh:targetSubjectsOf aimd2:baseModelURL ;
+    rdfs:label "Fine-Tuning Distribution Shape"@en ;
+    rdfs:comment "Distributions that carry aimd2:baseModelURL are fine-tuned derivatives and must carry a downstream licence URI."@en ;
+
+    sh:property [
+        sh:path aimd2:downstreamLicenceURI ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Violation ;
+        sh:message "Fine-tuned distribution is missing aimd2:downstreamLicenceURI — copyleft inheritance check (UC-3) will fail."@en ;
+    ] ;
+
+    sh:property [
+        sh:path aimd2:modelWeightsURL ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Warning ;
+        sh:message "Fine-tuned distribution is missing aimd2:modelWeightsURL — AGPL §13 violation cannot be assessed."@en ;
+    ] .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 3 — RLHF EVIDENCE SHAPES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+aimd2:RLHFDistributionShape
+    a sh:NodeShape ;
+    sh:targetSubjectsOf aimd2:rlhfDataPolicy ;
+    rdfs:label "RLHF Training Distribution Shape"@en ;
+    rdfs:comment "Distributions that declare an aimd2:rlhfDataPolicy must also carry explicit user consent status (GDPR Art. 6)."@en ;
+
+    sh:property [
+        sh:path aimd2:userConsentStatus ;
+        sh:minCount 1 ;
+        sh:hasValue "given" ;
+        sh:severity sh:Violation ;
+        sh:message "RLHF distribution is missing aimd2:userConsentStatus = 'given' — GDPR Art. 6/13/14 lawful basis for training on user interactions is unmet (UC-9)."@en ;
+    ] .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 4 — RAG EVIDENCE SHAPES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+aimd2:RAGDistributionShape
+    a sh:NodeShape ;
+    sh:targetSubjectsOf aimd2:ragCorpusPolicy ;
+    rdfs:label "RAG Retrieval Distribution Shape"@en ;
+    rdfs:comment "Distributions that act as RAG generators must declare their corpus policy and an inference endpoint."@en ;
+
+    sh:property [
+        sh:path aimd2:inferenceEndpointURL ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Warning ;
+        sh:message "RAG generator distribution is missing aimd2:inferenceEndpointURL — IDS-RAM multi-party PolicySet cannot be fully resolved."@en ;
+    ] ;
+
+    sh:property [
+        sh:path aimd2:article50PolicyURL ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Warning ;
+        sh:message "RAG distribution is missing aimd2:article50PolicyURL — EU AI Act Art. 50 GPAI disclosure is unverifiable."@en ;
+    ] .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 5 — SYNTHETIC DATA DISCLOSURE SHAPES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+aimd2:SyntheticDataDistributionShape
+    a sh:NodeShape ;
+    sh:targetSubjectsOf aimd2:dataGenerationMethod ;
+    rdfs:label "Synthetic Data Distribution Shape"@en ;
+    rdfs:comment "Distributions generated by a proprietary teacher model must explicitly disclose this in their Art. 53 policy (UC-10)."@en ;
+
+    sh:property [
+        sh:path aimd2:article50PolicyURL ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Violation ;
+        sh:message "Synthetic data distribution is missing aimd2:article50PolicyURL — EU AI Act Art. 53(1)(c) requires disclosure of the generation method and teacher model provenance."@en ;
+    ] .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 6 — GPAI COMPLIANCE SHAPE
+# Aggregates all GPAI-tier obligations on GPAI distributions.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+aimd2:GPAIComplianceShape
+    a sh:NodeShape ;
+    sh:targetClass aimd:AIModelDistribution ;
+    rdfs:label "GPAI Compliance Shape"@en ;
+    rdfs:comment "All AIMD distribution nodes with GPAI-tier obligations must satisfy EU AI Act Art. 53 evidence requirements."@en ;
+
+    # Warning-level: not every distribution is GPAI but those that are should declare inference endpoint
+    sh:property [
+        sh:path aimd2:inferenceEndpointURL ;
+        sh:severity sh:Info ;
+        sh:message "Distribution lacks aimd2:inferenceEndpointURL — if deployed as a GPAI system, EU AI Act Art. 50 systemic-risk disclosure applies."@en ;
+    ] .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 7 — CROSS-NODE SPARQL CONSTRAINT SHAPES
+# These shapes mirror the logic in the server_v2.js checker functions.
+# They require SPARQL 1.1 support in the SHACL processor.
+# GraphDB and Apache Jena TopBraid both support sh:SPARQLConstraint.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── UC-2 / UC-5: NC Conflict (commercial actor + NC parent licence) ──────────
+aimd2:NCConflictShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:Distribution ;
+    rdfs:label "NC Conflict Constraint (UC-2, UC-5)"@en ;
+    rdfs:comment "Detects distributions with actorType=commercial whose parent carries a CC-BY-NC prohibition on commercial AITraining."@en ;
+
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Violation ;
+        sh:message "NC CONFLICT: This distribution has actorType='commercial' but derives from a source with an NC prohibition on AITraining. CC-BY-NC §3(b); DSM Art. 4(3)."@en ;
+        sh:prefixes <https://example.com/shapes/AIMD-v2> ;
+        sh:select """
+            PREFIX aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#>
+            PREFIX aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#>
+            PREFIX odrl:  <http://www.w3.org/ns/odrl/2/>
+            PREFIX dcat:  <https://www.w3.org/ns/dcat#>
+
+            SELECT $this ?parentDist ?parentPolicy ?prohibition
+            WHERE {
+                $this aimd2:actorType "commercial" .
+                $this aimd:derivedFromDistribution ?parentDist .
+                ?parentDist odrl:hasPolicy ?parentPolicy .
+                ?parentPolicy odrl:prohibition ?prohibition .
+                ?prohibition odrl:action aimd2:AITraining .
+                ?prohibition odrl:constraint ?constraint .
+                ?constraint odrl:leftOperand  aimd2:actorType ;
+                            odrl:operator     odrl:eq ;
+                            odrl:rightOperand aimd2:CommercialPurpose .
+            }
+        """ ;
+    ] .
+
+# ── UC-3 / UC-7 / UC-8: Copyleft Propagation ────────────────────────────────
+aimd2:CopyleftPropagationShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:Distribution ;
+    rdfs:label "Copyleft Propagation Constraint (UC-3)"@en ;
+    rdfs:comment "Detects distributions missing downstreamLicenceURI when their parent carries a ShareAlike InheritSourceLicence obligation."@en ;
+
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Violation ;
+        sh:message "COPYLEFT VIOLATION: Derivative distribution does not carry aimd2:downstreamLicenceURI, breaching ShareAlike obligation inherited from parent. CC-BY-SA §3(b)."@en ;
+        sh:prefixes <https://example.com/shapes/AIMD-v2> ;
+        sh:select """
+            PREFIX aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#>
+            PREFIX aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#>
+            PREFIX odrl:  <http://www.w3.org/ns/odrl/2/>
+
+            SELECT $this ?parentDist ?obligation
+            WHERE {
+                $this aimd:derivedFromDistribution ?parentDist .
+                ?parentDist odrl:hasPolicy ?parentPolicy .
+                ?parentPolicy odrl:obligation ?obligation .
+                ?obligation odrl:action aimd2:InheritSourceLicence .
+                FILTER NOT EXISTS { $this aimd2:downstreamLicenceURI ?any }
+            }
+        """ ;
+    ] .
+
+# ── UC-4: Embargo Temporal Constraint ────────────────────────────────────────
+aimd2:EmbargoConstraintShape
+    a sh:NodeShape ;
+    sh:targetSubjectsOf aimd2:EmbargoEndDate ;
+    rdfs:label "Embargo Temporal Constraint (UC-4)"@en ;
+    rdfs:comment "Detects distributions with an EmbargoEndDate that has not yet passed (embargo still active)."@en ;
+
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Violation ;
+        sh:message "EMBARGO ACTIVE: Distribution's EmbargoEndDate is in the future — RAGIngestion or AITraining is not yet permitted. DSM Art. 3(1) lawful access."@en ;
+        sh:prefixes <https://example.com/shapes/AIMD-v2> ;
+        sh:select """
+            PREFIX aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#>
+            PREFIX xsd:   <http://www.w3.org/2001/XMLSchema#>
+
+            SELECT $this ?embargoEnd
+            WHERE {
+                $this aimd2:EmbargoEndDate ?embargoEnd .
+                FILTER (?embargoEnd > NOW())
+            }
+        """ ;
+    ] .
+
+# ── UC-6 / UC-15: Distillation Prohibition (competitor actor) ────────────────
+aimd2:DistillationProhibitionShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:Distribution ;
+    rdfs:label "Distillation Prohibition Constraint (UC-6)"@en ;
+    rdfs:comment "Detects distributions with actorType='competitor' that derive from a source with a competitor prohibition on AITraining."@en ;
+
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Violation ;
+        sh:message "DISTILLATION PROHIBITED: Distribution has actorType='competitor' and its parent source explicitly prohibits competitor AITraining. ToS contractual prohibition; US Copyright Office Part 2 (2025)."@en ;
+        sh:prefixes <https://example.com/shapes/AIMD-v2> ;
+        sh:select """
+            PREFIX aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#>
+            PREFIX aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#>
+            PREFIX odrl:  <http://www.w3.org/ns/odrl/2/>
+
+            SELECT $this ?parentDist ?prohibition
+            WHERE {
+                $this aimd2:actorType "competitor" .
+                $this aimd:derivedFromDistribution ?parentDist .
+                ?parentDist odrl:hasPolicy ?parentPolicy .
+                ?parentPolicy odrl:prohibition ?prohibition .
+                ?prohibition odrl:action aimd2:AITraining .
+                ?prohibition odrl:constraint ?c .
+                ?c odrl:leftOperand aimd2:actorType ;
+                   odrl:operator    odrl:eq ;
+                   odrl:rightOperand <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#CompetitorPurpose> .
+            }
+        """ ;
+    ] .
+
+# ── UC-8 / UC-15: AGPL §13 Network Trigger ───────────────────────────────────
+aimd2:AGPLNetworkTriggerShape
+    a sh:NodeShape ;
+    sh:targetSubjectsOf aimd2:deploymentContext ;
+    rdfs:label "AGPL §13 Network Trigger Constraint (UC-8)"@en ;
+    rdfs:comment "Detects distributions with deploymentContext='network' that lack modelWeightsURL when their licence carries an AGPL network copyleft obligation."@en ;
+
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Violation ;
+        sh:message "AGPL §13 VIOLATION: Distribution is deployed in a network context and derives from an AGPL-licensed source but does not declare aimd2:modelWeightsURL — source code/weights offer is required. AGPLv3 §13."@en ;
+        sh:prefixes <https://example.com/shapes/AIMD-v2> ;
+        sh:select """
+            PREFIX aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#>
+            PREFIX aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#>
+            PREFIX odrl:  <http://www.w3.org/ns/odrl/2/>
+
+            SELECT $this ?parentDist ?obligation
+            WHERE {
+                $this aimd2:deploymentContext "network" .
+                FILTER NOT EXISTS { $this aimd2:modelWeightsURL ?weights }
+                $this aimd:derivedFromDistribution* ?parentDist .
+                ?parentDist odrl:hasPolicy ?parentPolicy .
+                ?parentPolicy odrl:obligation ?obligation .
+                ?obligation odrl:action aimd2:InheritSourceLicence .
+                ?obligation odrl:constraint ?c .
+                ?c odrl:leftOperand aimd2:deploymentContext ;
+                   odrl:operator    odrl:eq ;
+                   odrl:rightOperand <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#NetworkDeployment> .
+            }
+        """ ;
+    ] .
+
+# ── UC-9: RLHF Consent Cross-check ───────────────────────────────────────────
+aimd2:RLHFConsentCrossCheckShape
+    a sh:NodeShape ;
+    sh:targetSubjectsOf aimd2:rlhfDataPolicy ;
+    rdfs:label "RLHF Consent Cross-Check Shape (UC-9)"@en ;
+    rdfs:comment "Cross-node check: if a distribution's parent declared an RLHF policy, the derivative must carry explicit consent status."@en ;
+
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Violation ;
+        sh:message "RLHF CONSENT MISSING: Distribution declares an rlhfDataPolicy but lacks aimd2:userConsentStatus='given'. GDPR Art. 6 lawful basis for RLHF on user interaction data is absent (UC-9)."@en ;
+        sh:prefixes <https://example.com/shapes/AIMD-v2> ;
+        sh:select """
+            PREFIX aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#>
+
+            SELECT $this ?policy
+            WHERE {
+                $this aimd2:rlhfDataPolicy ?policy .
+                FILTER NOT EXISTS {
+                    $this aimd2:userConsentStatus "given" .
+                }
+            }
+        """ ;
+    ] .
+
+# ── UC-10 / UC-15: Synthetic Data Disclosure Gap ─────────────────────────────
+aimd2:SyntheticDataDisclosureGapShape
+    a sh:NodeShape ;
+    sh:targetSubjectsOf aimd2:dataGenerationMethod ;
+    rdfs:label "Synthetic Data Disclosure Gap Shape (UC-10)"@en ;
+    rdfs:comment "Distributions with dataGenerationMethod='synthetic-from-proprietary-teacher' must carry an article50PolicyURL that explicitly covers the generation chain."@en ;
+
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Violation ;
+        sh:message "ART. 53 DISCLOSURE GAP: Distribution uses synthetic-from-proprietary-teacher as dataGenerationMethod but lacks aimd2:article50PolicyURL. EU AI Act Art. 53(1)(c) requires explicit disclosure of training data sources including synthetic corpora (UC-10)."@en ;
+        sh:prefixes <https://example.com/shapes/AIMD-v2> ;
+        sh:select """
+            PREFIX aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#>
+
+            SELECT $this ?method
+            WHERE {
+                $this aimd2:dataGenerationMethod "synthetic-from-proprietary-teacher" .
+                FILTER NOT EXISTS { $this aimd2:article50PolicyURL ?url }
+            }
+        """ ;
+    ] .
+
+# ── UC-11: RAG PolicySet Multi-Asset Check ───────────────────────────────────
+aimd2:RAGPolicySetShape
+    a sh:NodeShape ;
+    sh:targetSubjectsOf aimd2:ragCorpusPolicy ;
+    rdfs:label "RAG PolicySet Multi-Asset Shape (UC-11)"@en ;
+    rdfs:comment "RAG generators must derive from at least two sources (retriever + corpus) and each parent must carry an odrl:hasPolicy link for PolicySet composition."@en ;
+
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Warning ;
+        sh:message "RAG POLICYSET INCOMPLETE: RAG generator derives from fewer than 2 parent distributions with odrl:hasPolicy links — IDS-RAM 4.0 multi-party PolicySet cannot be fully composed (UC-11)."@en ;
+        sh:prefixes <https://example.com/shapes/AIMD-v2> ;
+        sh:select """
+            PREFIX aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#>
+            PREFIX aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#>
+            PREFIX odrl:  <http://www.w3.org/ns/odrl/2/>
+
+            SELECT $this (COUNT(DISTINCT ?parent) AS ?parentCount)
+            WHERE {
+                $this aimd2:ragCorpusPolicy ?corpusPolicy .
+                $this aimd:derivedFromDistribution ?parent .
+                ?parent odrl:hasPolicy ?parentPolicy .
+            }
+            GROUP BY $this
+            HAVING (COUNT(DISTINCT ?parent) < 2)
+        """ ;
+    ] .
+
+# ── UC-12 / UC-15: MoE Obligation Inheritance Check ──────────────────────────
+aimd2:MoEObligationInheritanceShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:Distribution ;
+    rdfs:label "MoE Obligation Inheritance Shape (UC-12)"@en ;
+    rdfs:comment "Merged MoE distributions must carry the strictest obligation from ALL expert parents — if any parent policy propagates obligations to its own URI, those obligations must appear in the merged model's policy."@en ;
+
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Violation ;
+        sh:message "MOE INHERITANCE FAILURE: Merged distribution's policy does not match or include obligations from an expert parent whose policy declares aimd2:propagatesObligationTo. All strictest parent obligations must survive into the merged model. Meta Llama Community License §2 (UC-12)."@en ;
+        sh:prefixes <https://example.com/shapes/AIMD-v2> ;
+        sh:select """
+            PREFIX aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#>
+            PREFIX aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#>
+            PREFIX odrl:  <http://www.w3.org/ns/odrl/2/>
+
+            SELECT $this ?expertDist ?expertPolicy ?mergedPolicy
+            WHERE {
+                $this aimd:derivedFromDistribution ?expertDist .
+                ?expertDist odrl:hasPolicy ?expertPolicy .
+                ?expertPolicy aimd2:propagatesObligationTo ?expertPolicy .
+                $this odrl:hasPolicy ?mergedPolicy .
+                FILTER (?mergedPolicy != ?expertPolicy)
+                # Merged policy does not match or import the expert policy
+                FILTER NOT EXISTS {
+                    ?mergedPolicy odrl:obligation ?ob .
+                    ?ob odrl:action ?expertAction .
+                    ?expertPolicy odrl:obligation ?expertOb .
+                    ?expertOb odrl:action ?expertAction .
+                }
+            }
+        """ ;
+    ] .
+
+# ── UC-15: Cascading Unresolvable Conflict Detection ─────────────────────────
+aimd2:CascadingConflictShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:Distribution ;
+    rdfs:label "Cascading Conflict Shape (UC-15)"@en ;
+    rdfs:comment "Terminal distributions in a 4+ hop chain must not carry simultaneously: distillation prohibition + AGPL network trigger + Art. 53 disclosure gap. Three simultaneous conflicts are unresolvable by any licence-compatibility rule."@en ;
+
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Violation ;
+        sh:message "CASCADING UNRESOLVABLE CONFLICT: Distribution simultaneously has (1) actorType=competitor on a prohibited source chain, (2) deploymentContext=network without modelWeightsURL, and (3) dataGenerationMethod=synthetic-from-proprietary-teacher without article50PolicyURL. No licence-compatibility mechanism can resolve all three simultaneously. EU AI Act Art. 53(1)(c); OWASP SCVS BOM (UC-15)."@en ;
+        sh:prefixes <https://example.com/shapes/AIMD-v2> ;
+        sh:select """
+            PREFIX aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#>
+            PREFIX aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#>
+
+            SELECT $this
+            WHERE {
+                # Conflict 1: distillation prohibition signal on chain
+                $this aimd2:actorType "competitor" .
+
+                # Conflict 2: AGPL network trigger
+                $this aimd2:deploymentContext "network" .
+                FILTER NOT EXISTS { $this aimd2:modelWeightsURL ?w }
+
+                # Conflict 3: synthetic data disclosure gap
+                $this aimd2:dataGenerationMethod "synthetic-from-proprietary-teacher" .
+                FILTER NOT EXISTS { $this aimd2:article50PolicyURL ?url }
+            }
+        """ ;
+    ] .
+
+# ── UC-14: 3-Hop Provenance Completeness Check ───────────────────────────────
+aimd2:MultiHopProvenanceShape
+    a sh:NodeShape ;
+    sh:targetSubjectsOf aimd2:inferenceEndpointURL ;
+    rdfs:label "Multi-Hop Provenance Completeness Shape (UC-14)"@en ;
+    rdfs:comment "Distributions serving as API/inference endpoints (GPAI tier) must have a traceable article50PolicyURL at every hop in their derivation chain."@en ;
+
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Violation ;
+        sh:message "PROVENANCE GAP: API-deployed distribution lacks aimd2:article50PolicyURL, or one of its upstream hop distributions in the derivation chain is missing an Art. 50 policy URL. EU AI Act Art. 53(1)(c) GPAI training transparency (UC-14)."@en ;
+        sh:prefixes <https://example.com/shapes/AIMD-v2> ;
+        sh:select """
+            PREFIX aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#>
+            PREFIX aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#>
+
+            SELECT $this ?hopDist
+            WHERE {
+                $this aimd2:inferenceEndpointURL ?endpoint .
+                $this aimd:derivedFromDistribution+ ?hopDist .
+                ?hopDist aimd2:trainingDatasetURL ?trainDS .
+                FILTER NOT EXISTS { ?hopDist aimd2:article50PolicyURL ?url }
+            }
+        """ ;
+    ] .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 8 — SHAPE GROUPS (sh:NodeGroup annotation — informational)
+# These are not executable SHACL but help documentation tools group shapes.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+<https://example.com/shapes/groups/base-evidence>
+    rdfs:label "Base Evidence Group"@en ;
+    rdfs:member aimd2:AIModelDistributionShape ;
+    rdfs:member aimd2:TrainingDistributionShape ;
+    rdfs:member aimd2:FineTuningDistributionShape .
+
+<https://example.com/shapes/groups/consent-and-rlhf>
+    rdfs:label "Consent and RLHF Group"@en ;
+    rdfs:member aimd2:RLHFDistributionShape ;
+    rdfs:member aimd2:RLHFConsentCrossCheckShape .
+
+<https://example.com/shapes/groups/copyleft>
+    rdfs:label "Copyleft and Network Propagation Group"@en ;
+    rdfs:member aimd2:CopyleftPropagationShape ;
+    rdfs:member aimd2:AGPLNetworkTriggerShape .
+
+<https://example.com/shapes/groups/eu-ai-act>
+    rdfs:label "EU AI Act Art. 50/53 Compliance Group"@en ;
+    rdfs:member aimd2:GPAIComplianceShape ;
+    rdfs:member aimd2:SyntheticDataDistributionShape ;
+    rdfs:member aimd2:SyntheticDataDisclosureGapShape ;
+    rdfs:member aimd2:MultiHopProvenanceShape .
+
+<https://example.com/shapes/groups/cross-node>
+    rdfs:label "Cross-Node SPARQL Constraint Group"@en ;
+    rdfs:member aimd2:NCConflictShape ;
+    rdfs:member aimd2:DistillationProhibitionShape ;
+    rdfs:member aimd2:EmbargoConstraintShape ;
+    rdfs:member aimd2:RAGPolicySetShape ;
+    rdfs:member aimd2:MoEObligationInheritanceShape ;
+    rdfs:member aimd2:CascadingConflictShape .

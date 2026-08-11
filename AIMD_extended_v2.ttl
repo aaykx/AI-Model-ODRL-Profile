@@ -1,0 +1,370 @@
+﻿@prefix aimd2:   <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+@prefix aimd:    <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix odrl:    <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:     <http://purl.org/dc/terms/> .
+@prefix dc:      <http://purl.org/dc/elements/1.1/> .
+@prefix vann:    <http://purl.org/vocab/vann/> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix profile: <http://www.w3.org/ns/dx/prof/> .
+@prefix schema:  <https://schema.org/> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AIMD Extended Profile  v2.0  (builds on AIMD_extended.ttl v3.0)
+#  Original profile (v1.0):  Cian Twomey, 2024
+#  Extended (v3.0):          Diya Mathew, 2026
+#  Extended (v2.0 / this):   MAI Dissertation, 2026
+#
+#  New terms (21 total):
+#   1.  11 odrl:Action terms covering training pipelines, RLHF, RAG,
+#       model sharing, licence inheritance, and EU AI Act Art. 50.
+#   2.  9  operand terms (LeftOperand / RightOperand) for new constraint axes.
+#   3.  1  plain RDF property: aimd2:propagatesObligationTo
+#
+#  Every action carries aimd:evidenceProperty, aimd:severity,
+#  aimd:legalBasis, and aimd:checkDescription so the graph-driven
+#  compliance checker (server_v2.js) picks them up automatically.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+<https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl>
+    a owl:Ontology, profile:Profile ;
+
+    # ── Namespace metadata (read by WIDOCO for prefix table) ──────────────────
+    vann:preferredNamespacePrefix "aimd2" ;
+    vann:preferredNamespaceUri    "https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#" ;
+
+    # ── Versioning ─────────────────────────────────────────────────────────────
+    owl:versionIRI   <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    owl:versionInfo  "2.0" ;
+    owl:priorVersion <https://raw.githubusercontent.com/khaleesi123got/AI-Model-Distribution-ODRL-Profile/main/AIMD_extended.ttl> ;
+
+    # ── Identity and provenance ────────────────────────────────────────────────
+    owl:imports <https://raw.githubusercontent.com/khaleesi123got/AI-Model-Distribution-ODRL-Profile/main/AIMD_extended.ttl> ;
+    profile:isProfileOf <http://www.w3.org/ns/odrl/2/> ;
+
+    # ── Human-readable metadata (WIDOCO uses dc: for the Authors section) ─────
+    dct:title       "AI Model Distribution — ODRL Extended Profile v2.0"@en ;
+    dc:title        "AI Model Distribution — ODRL Extended Profile v2.0"@en ;
+    dc:creator      "Aditya Kumar Singh" ;
+    dct:contributor "Cian Twomey" , "Diya Mathew" ;
+    dct:created     "2026-06-10"^^xsd:date ;
+    dct:modified    "2026-07-19"^^xsd:date ;
+    dct:license     <http://creativecommons.org/licenses/by/4.0/> ;
+
+    rdfs:label "AIMD Extended Profile v2.0"@en ;
+
+    dct:abstract
+        "AIMD Profile v2.0 is an ODRL 2.2 profile extension that adds machine-readable governance terms for AI training pipelines. It introduces 11 Action terms covering pre-training, fine-tuning, RLHF, RAG ingestion, model sharing, copyleft inheritance, ToS constraint inheritance, and EU AI Act Art. 50 transparency. It also adds 6 LeftOperand and 3 RightOperand terms for actor-type, embargo, consent, deployment context, and data-generation-method constraints, plus the propagatesObligationTo object property for multi-hop obligation propagation. All terms carry evidenceProperty, legalBasis, severity, and checkDescription annotations so the accompanying graph-driven compliance checker (server_v2.js) can discover and apply them entirely from the graph without hard-coded logic."@en ;
+
+    dct:description
+        "AIMD Profile v2.0 adds 11 action terms for AI training pipelines, RLHF, RAG, copyleft inheritance, and EU AI Act Art. 50; plus 9 operand terms and the propagatesObligationTo property. Built on AIMD v3.0 (Diya Mathew, 2026), which itself extends AIMD v1.0 (Cian Twomey, 2024)."@en ;
+
+    rdfs:seeAlso <https://github.com/aaykx/AI-Model-ODRL-Profile> .
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# ACTION TERMS  (odrl:Action instances — typed as owl:NamedIndividual for WIDOCO)
+# ───────────────────────────────────────────────────────────────────────────────
+
+aimd2:AITraining
+    a odrl:Action, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "AI Training"@en ;
+    rdfs:comment
+        "Obligation to declare the dataset URL(s) used to pre-train the AI model, including access conditions and applicable licence. Satisfies DSM Art. 3/4 text and data mining transparency and OSAID 1.0 training data disclosure requirement."@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#trainingDatasetURL" ;
+    aimd:severity         "mandatory" ;
+    aimd:legalBasis       "DSM Directive Art. 3/4; OSAID 1.0" ;
+    aimd:checkDescription "trainingDatasetURL present and not a placeholder" ;
+    skos:example
+        "dcat:OpenResearchLLMDist1 aimd2:trainingDatasetURL <https://tara.tcd.ie/uc1-corpus> — pre-training corpus URL declared on the distribution."@en .
+
+aimd2:FineTuning
+    a odrl:Action, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Fine Tuning"@en ;
+    rdfs:comment
+        "Obligation to declare the base model URL from which this model was fine-tuned, enabling licence chain traceability. Required under OSAID 1.0 for any derived model and under EU AI Act Art. 53 for GPAI models."@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#baseModelURL" ;
+    aimd:severity         "mandatory" ;
+    aimd:legalBasis       "OSAID 1.0; EU AI Act Art. 53" ;
+    aimd:checkDescription "baseModelURL present and not a placeholder" ;
+    skos:example
+        "dcat:MITStudentDist7 aimd2:baseModelURL <https://huggingface.co/apache-org/base-model-uc7> — Apache 2.0 base declared on the MIT fine-tune."@en .
+
+aimd2:RAGIngestion
+    a odrl:Action, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "RAG Ingestion"@en ;
+    rdfs:comment
+        "Obligation to declare the retrieval-augmented generation corpus policy, specifying which documents are indexed and under what terms. Encodes IDS-RAM 4.0 multi-party policy composition at inference time."@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#ragCorpusPolicy" ;
+    aimd:severity         "mandatory" ;
+    aimd:legalBasis       "Novel — operational best practice; IDS-RAM 4.0" ;
+    aimd:checkDescription "ragCorpusPolicy declared for RAG-enabled distributions" ;
+    skos:example
+        "dcat:GeneratorRAGDist11 aimd2:ragCorpusPolicy <https://example.com/policy/RAGCorpusLicence> — corpus licence linked to the RAG generator."@en .
+
+aimd2:RLHFTraining
+    a odrl:Action, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "RLHF Training"@en ;
+    rdfs:comment
+        "Obligation to declare the policy governing human-feedback data used in reinforcement learning from human feedback (RLHF), including the legal basis for consent. GDPR Art. 13/14 requires transparency notices when personal data are processed; EU AI Act Art. 10 mandates data governance documentation for high-risk systems."@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#rlhfDataPolicy" ;
+    aimd:severity         "mandatory" ;
+    aimd:legalBasis       "GDPR Art. 13/14; EU AI Act Art. 10" ;
+    aimd:checkDescription "rlhfDataPolicy declared, covering consent and data governance" ;
+    skos:example
+        "dcat:RLHFAlignedDist9 aimd2:rlhfDataPolicy <https://example.com/uc9/rlhf-policy> — RLHF data governance policy linked; userConsentStatus absent → GDPR violation."@en .
+
+aimd2:AIInference
+    a odrl:Action, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "AI Inference"@en ;
+    rdfs:comment
+        "Recommended obligation to publish the inference endpoint URL so downstream users and auditors can identify the deployed service and apply runtime access controls."@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#inferenceEndpointURL" ;
+    aimd:severity         "recommended" ;
+    aimd:legalBasis       "Novel — operational" ;
+    aimd:checkDescription "inferenceEndpointURL declared (recommended for deployed models)" ;
+    skos:example
+        "dcat:ExecutorLLMDist13 aimd2:inferenceEndpointURL <https://api.executor-llm.example.com/v1> — inference chain endpoint declared; no training properties present → correctly excluded from training obligations."@en .
+
+aimd2:ModelSharing
+    a odrl:Action, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Model Sharing"@en ;
+    rdfs:comment
+        "Obligation to publish the model weights URL to satisfy the OSAID 1.0 Share freedom, allowing users to study, modify, and redistribute the model. Also required for AGPL §13 network-use source disclosure."@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#modelWeightsURL" ;
+    aimd:severity         "mandatory" ;
+    aimd:legalBasis       "OSAID 1.0 Share freedom; AGPLv3 §13" ;
+    aimd:checkDescription "modelWeightsURL present and publicly accessible" ;
+    skos:example
+        "dcat:NetworkAPIDist8 aimd2:deploymentContext \"network\" — modelWeightsURL absent despite AGPL licence → AGPL §13 violation."@en .
+
+aimd2:InheritSourceLicence
+    a odrl:Action, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Inherit Source Licence"@en ;
+    rdfs:comment
+        "Obligation to carry the downstream distribution licence URI to demonstrate share-alike or copyleft inheritance from the source dataset or model. Used by CC-BY-SA and GPL-family licences. Absence of downstreamLicenceURI on a derivative of a copyleft source is the structural signal for a copyleft violation."@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#downstreamLicenceURI" ;
+    aimd:severity         "mandatory" ;
+    aimd:legalBasis       "CC-BY-SA ShareAlike §3(b); GPLv3 §5" ;
+    aimd:checkDescription "downstreamLicenceURI declared and compatible with source licence" ;
+    skos:example
+        "dcat:CopyleftViolatingModelDist3 — derived from CC-BY-SA corpus; downstreamLicenceURI absent → ShareAlike obligation not honoured."@en .
+
+aimd2:InheritSourceProhibitions
+    a odrl:Action, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Inherit Source Prohibitions"@en ;
+    rdfs:comment
+        "Obligation to declare the derived model licence URI, showing that prohibited uses from RAIL-type, GPAI, and proprietary API source licences have been inherited downstream. Encodes the ToS constraint inheritance mechanism (Layer 2 of UC-6): even when distillation is prohibited, the derived model must carry evidence that it acknowledges the source's prohibitions."@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#derivedModelLicenceURI" ;
+    aimd:severity         "mandatory" ;
+    aimd:legalBasis       "RAIL licence; EU AI Act Annex V; ToS contract law" ;
+    aimd:checkDescription "derivedModelLicenceURI present and carries source prohibitions" ;
+    skos:example
+        "dcat:UnauthorisedDistillationDist6 — distilled from proprietary LLM API; derivedModelLicenceURI absent → Layer 2 (contractual constraint inheritance) violation in addition to Layer 1 competitor prohibition."@en .
+
+aimd2:DeclareRLHFDataUse
+    a odrl:Action, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Declare RLHF Data Use"@en ;
+    rdfs:comment
+        "Obligation to publish the RLHF disclosure URL documenting how human feedback data was collected, stored, and used. Satisfies GDPR Art. 13 transparency requirements and EU AI Act Art. 10 data governance documentation for alignment-trained models."@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#rlhfDisclosureURL" ;
+    aimd:severity         "mandatory" ;
+    aimd:legalBasis       "GDPR Art. 13; EU AI Act Art. 10" ;
+    aimd:checkDescription "rlhfDisclosureURL present and references a transparency notice" .
+
+aimd2:ReportSecurityIncidents
+    a odrl:Action, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Report Security Incidents"@en ;
+    rdfs:comment
+        "Obligation to publish a security contact URL through which model-level vulnerabilities, adversarial attacks, and supply-chain incidents can be reported. Aligns with G7 AI Security SBOM Cluster 6 recommendations and EU AI Act Art. 72 post-market monitoring obligations."@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#securityContactURL" ;
+    aimd:severity         "mandatory" ;
+    aimd:legalBasis       "G7 SBOM Cluster 6; EU AI Act Art. 72" ;
+    aimd:checkDescription "securityContactURL declared (e.g. security.txt or PSIRT link)" .
+
+aimd2:ComplyWithArticle50
+    a odrl:Action, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Comply With Article 50"@en ;
+    rdfs:comment
+        "Obligation to declare the Article 50 policy URL documenting AI-generated content transparency obligations — labelling, disclosure, and watermarking of synthetic media. Applies to all GPAI models and any distribution in a chain that generates synthetic training data from a proprietary teacher."@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#article50PolicyURL" ;
+    aimd:severity         "mandatory" ;
+    aimd:legalBasis       "EU AI Act Art. 50; EU AI Act Art. 53(1)(c)" ;
+    aimd:checkDescription "article50PolicyURL present covering deepfake and AIGC disclosure requirements" ;
+    skos:example
+        "dcat:OpenModelSyntheticDist10 aimd2:dataGenerationMethod \"synthetic-from-proprietary-teacher\" — article50PolicyURL absent → Art. 53 disclosure gap."@en .
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# RIGHT OPERAND TERMS
+# ───────────────────────────────────────────────────────────────────────────────
+
+aimd2:CommercialPurpose
+    a odrl:RightOperand, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Commercial Purpose"@en ;
+    rdfs:comment
+        "Right operand distinguishing commercial TDM use from research use under DSM Directive Art. 4. Commercial actors do not benefit from the Art. 3 research exception and must obtain a separate licence for training on protected works."@en ;
+    skos:example
+        "odrl:constraint [ aimd2:actorType odrl:eq aimd2:CommercialPurpose ] — gates a prohibition on commercial actors only."@en .
+
+aimd2:ScientificResearchPurpose
+    a odrl:RightOperand, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Scientific Research Purpose"@en ;
+    rdfs:comment
+        "Right operand for the DSM Directive Art. 3 research TDM exception, restricted to non-commercial scientific research. Actors using this constraint must qualify as recognised research organisations."@en .
+
+aimd2:RecognisedResearchOrganisation
+    a odrl:RightOperand, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Recognised Research Organisation"@en ;
+    rdfs:comment
+        "Actor constraint for DSM Art. 3 — restricts TDM to qualifying research institutions (universities, research centres) as recognised by EU member states. Does not extend to commercial entities even if they conduct research."@en .
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# LEFT OPERAND TERMS
+# ───────────────────────────────────────────────────────────────────────────────
+
+aimd2:EmbargoEndDate
+    a odrl:LeftOperand, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Embargo End Date"@en ;
+    rdfs:comment
+        "Left operand for time-bounded constraints on embargoed repository records. Evaluated against xsd:date values stored on the distribution itself (not in the licence policy), enabling temporal self-resolution: the verdict changes automatically when the date passes without any code change."@en ;
+    skos:example
+        "dcat:PrematureRAGDist4 aimd2:EmbargoEndDate \"2027-06-30\"^^xsd:date — embargo active until 2027; RAG ingestion prohibited until then."@en .
+
+aimd2:userConsentStatus
+    a odrl:LeftOperand, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "User Consent Status"@en ;
+    rdfs:comment
+        "Left operand checking whether the individual whose data is used in RLHF has provided valid GDPR consent. Expected values: 'given', 'withdrawn', 'not-required'. Absence of this property on a distribution with rlhfDataPolicy triggers a GDPR consent violation."@en .
+
+aimd2:downstreamLicence
+    a odrl:LeftOperand, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Downstream Licence"@en ;
+    rdfs:comment
+        "Left operand checking whether the downstream model licence satisfies the copyleft or share-alike requirement of the source dataset or model licence. Used in constraints of the form: downstream licence must be a CC-BY-SA-compatible licence."@en .
+
+aimd2:actorType
+    a odrl:LeftOperand, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Actor Type"@en ;
+    rdfs:comment
+        "Left operand distinguishing commercial entities from research organisations and from competitor model trainers. Used with aimd2:CommercialPurpose (for NC licence constraints) and with literal value 'competitor' (for proprietary API ToS distillation constraints)."@en ;
+    skos:example
+        "dcat:CommercialProductDist2 aimd2:actorType \"commercial\" — triggers NC conflict against CC-BY-NC source licence."@en .
+
+aimd2:dataGenerationMethod
+    a odrl:LeftOperand, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Data Generation Method"@en ;
+    rdfs:comment
+        "Left operand distinguishing synthetic data generated from a proprietary teacher model from real-world or mixed data in training pipelines. Value 'synthetic-from-proprietary-teacher' triggers Art. 53 disclosure obligations and propagates the ToS constraint from the teacher to the derived model."@en ;
+    skos:example
+        "dcat:OpenModelSyntheticDist10 aimd2:dataGenerationMethod \"synthetic-from-proprietary-teacher\" — synthetic provenance not declared in Art. 50 policy → disclosure gap."@en .
+
+aimd2:deploymentContext
+    a odrl:LeftOperand, owl:NamedIndividual ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label "Deployment Context"@en ;
+    rdfs:comment
+        "Left operand distinguishing network-accessible API deployment from local or embedded deployment. Value 'network' triggers AGPL §13 network-use copyleft provisions: model weights must be offered to network users even if the model is not distributed."@en ;
+    skos:example
+        "dcat:NetworkAPIDist8 aimd2:deploymentContext \"network\" — AGPL fine-tune deployed as network API without offering source → AGPL §13 violation."@en .
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# OBJECT PROPERTY
+# ───────────────────────────────────────────────────────────────────────────────
+
+aimd2:propagatesObligationTo
+    a rdf:Property, owl:ObjectProperty ;
+    rdfs:isDefinedBy <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl> ;
+    rdfs:label   "Propagates Obligation To"@en ;
+    rdfs:domain  odrl:Policy ;
+    rdfs:range   odrl:Policy ;
+    rdfs:comment
+        "Links an upstream ODRL policy to downstream policies that must inherit its obligations. Added to every licence policy in the AIMD v2.0 knowledge graph to enable transitive SPARQL property-path queries that detect obligation loss across multi-hop training chains. A self-referential link (policy → itself) marks the policy as a propagation source."@en ;
+    skos:example
+        "<https://example.com/policy/ProprietaryDistillationLicence> aimd2:propagatesObligationTo <https://example.com/policy/ProprietaryDistillationLicence> — ToS prohibitions must flow to any derived model policy."@en .
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# SKOS Collection — all 21 new terms
+# ───────────────────────────────────────────────────────────────────────────────
+
+aimd2:ActionTerms
+    a skos:Collection ;
+    skos:prefLabel "AIMD v2.0 Action Terms"@en ;
+    skos:scopeNote "11 new odrl:Action terms for AI training pipeline governance"@en ;
+    skos:member aimd2:AITraining ;
+    skos:member aimd2:FineTuning ;
+    skos:member aimd2:RAGIngestion ;
+    skos:member aimd2:RLHFTraining ;
+    skos:member aimd2:AIInference ;
+    skos:member aimd2:ModelSharing ;
+    skos:member aimd2:InheritSourceLicence ;
+    skos:member aimd2:InheritSourceProhibitions ;
+    skos:member aimd2:DeclareRLHFDataUse ;
+    skos:member aimd2:ReportSecurityIncidents ;
+    skos:member aimd2:ComplyWithArticle50 .
+
+aimd2:OperandTerms
+    a skos:Collection ;
+    skos:prefLabel "AIMD v2.0 Operand Terms"@en ;
+    skos:scopeNote "6 LeftOperand and 3 RightOperand terms for new constraint axes"@en ;
+    skos:member aimd2:CommercialPurpose ;
+    skos:member aimd2:ScientificResearchPurpose ;
+    skos:member aimd2:RecognisedResearchOrganisation ;
+    skos:member aimd2:EmbargoEndDate ;
+    skos:member aimd2:userConsentStatus ;
+    skos:member aimd2:downstreamLicence ;
+    skos:member aimd2:actorType ;
+    skos:member aimd2:dataGenerationMethod ;
+    skos:member aimd2:deploymentContext .
+
+aimd2:
+    a skos:Collection ;
+    skos:prefLabel "AIMD Extended Profile v2.0 Vocabulary"@en ;
+    skos:scopeNote "All 21 new terms introduced in AIMD v2.0 — training pipeline governance extension"@en ;
+    skos:member aimd2:AITraining ;
+    skos:member aimd2:FineTuning ;
+    skos:member aimd2:RAGIngestion ;
+    skos:member aimd2:RLHFTraining ;
+    skos:member aimd2:AIInference ;
+    skos:member aimd2:ModelSharing ;
+    skos:member aimd2:InheritSourceLicence ;
+    skos:member aimd2:InheritSourceProhibitions ;
+    skos:member aimd2:DeclareRLHFDataUse ;
+    skos:member aimd2:ReportSecurityIncidents ;
+    skos:member aimd2:ComplyWithArticle50 ;
+    skos:member aimd2:CommercialPurpose ;
+    skos:member aimd2:ScientificResearchPurpose ;
+    skos:member aimd2:RecognisedResearchOrganisation ;
+    skos:member aimd2:EmbargoEndDate ;
+    skos:member aimd2:userConsentStatus ;
+    skos:member aimd2:downstreamLicence ;
+    skos:member aimd2:actorType ;
+    skos:member aimd2:dataGenerationMethod ;
+    skos:member aimd2:deploymentContext ;
+    skos:member aimd2:propagatesObligationTo .

@@ -1,0 +1,68 @@
+﻿@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix dcat:  <https://www.w3.org/ns/dcat#> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CommercialConflictLicence  (Use Case 2)
+#  Models a CC-BY-NC 4.0 licence applied to a training dataset. The
+#  non-commercial restriction prohibits AI training for commercial purposes.
+#  GPAI providers must honour the DSM Art. 4(3) machine-readable opt-out
+#  (EU AI Act Art. 53(1)(c)).
+#
+#  Expected compliance result: ✗ CONFLICT — NC prohibition vs commercial use
+#  Legal basis: CC-BY-NC 4.0 §3(b); DSM Art. 4(3); EU AI Act Art. 53(1)(c).
+# ─────────────────────────────────────────────────────────────────────────────
+
+<https://example.com/policy/CommercialConflictLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "CC-BY-NC Commercial Conflict Licence — Non-Commercial AI Training Restriction" ;
+    dct:description "Permits AI training only for non-commercial research. Commercial actors (including GPAI providers) are prohibited from using this dataset. Machine-readable opt-out per DSM Art. 4(3); GPAI providers must comply per EU AI Act Art. 53(1)(c)." ;
+    dct:created "2026-06-30"^^xsd:date ;
+    dct:references <https://creativecommons.org/licenses/by-nc/4.0/> ;
+
+    # ── PERMISSION: non-commercial AI training only ──────────────────────────
+    odrl:permission [
+        odrl:target   <https://example.com/assets/NCDataset> ;
+        odrl:assigner <https://example.com/DatasetOwner> ;
+        odrl:action   aimd2:AITraining ;
+        odrl:constraint [
+            odrl:leftOperand  aimd2:actorType ;
+            odrl:operator     odrl:neq ;
+            odrl:rightOperand aimd2:CommercialPurpose ;
+        ] ;
+    ] ;
+
+    # ── PROHIBITION: commercial AI training — the conflict trigger ───────────
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/NCDataset> ;
+        odrl:action  aimd2:AITraining ;
+        odrl:constraint [
+            odrl:leftOperand  aimd2:actorType ;
+            odrl:operator     odrl:eq ;
+            odrl:rightOperand aimd2:CommercialPurpose ;
+        ] ;
+    ] ;
+
+    # ── PROHIBITION: commercial model sharing ────────────────────────────────
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/NCDataset> ;
+        odrl:action  aimd2:ModelSharing ;
+        odrl:constraint [
+            odrl:leftOperand  aimd2:actorType ;
+            odrl:operator     odrl:eq ;
+            odrl:rightOperand aimd2:CommercialPurpose ;
+        ] ;
+    ] ;
+
+    # ── Obligation: inherit NC prohibition to downstream ─────────────────────
+    odrl:obligation [
+        odrl:action aimd2:InheritSourceProhibitions ;
+    ] ;
+
+    # Chain-propagation: NC prohibition must flow downstream
+    aimd2:propagatesObligationTo <https://example.com/policy/CommercialConflictLicence> .

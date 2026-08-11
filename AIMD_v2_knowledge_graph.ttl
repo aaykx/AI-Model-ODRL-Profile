@@ -1,0 +1,660 @@
+﻿@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix dcat:  <https://www.w3.org/ns/dcat#> .
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AIMD v2.0 — Use-Case Knowledge Graph
+#  All 15 multi-hop licence chain instances as a single importable Turtle file.
+#
+#  Load order into GraphDB:
+#   1. AIMD_extended.ttl       (Diya Mathew v3.0 — aimd: terms)
+#   2. AIMD_extended_v2.ttl    (this dissertation — aimd2: terms)
+#   3. AIMD_v2_knowledge_graph.ttl  (this file — instance data)
+#
+#  All 13 licence TTL files (OpenResearchLLMLicence.ttl, CommercialConflict
+#  Licence.ttl, etc.) should also be imported so their ODRL policy triples
+#  are available for SPARQL queries that follow odrl:hasPolicy links.
+#
+#  Diya's original distribution data (IrishLegalLLMDist1.5 etc.) is
+#  populated by running server_v2.js. This file covers only the 15 new
+#  UC-specific chain instances.
+#
+#  Chain notation in this file: each section shows the hop sequence then
+#  the aimd2:propagatesObligationTo links that make obligations flow.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── Top-level DCAT Catalog grouping all UC distributions ─────────────────────
+<https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_v2_knowledge_graph.ttl>
+    a dcat:Catalog ;
+    dct:title "AIMD v2.0 Use Case Provenance Chains"@en ;
+    dct:description "All 15 multi-hop AI model licence use case chains for the MAI dissertation (TCD 2026). Each chain demonstrates a distinct compliance scenario across the AIMD v2.0 profile."@en ;
+    dct:creator <https://github.com/aaykx> ;
+    dct:issued "2026-06-30"^^xsd:date ;
+    dct:license <https://creativecommons.org/licenses/by/4.0/> ;
+    dcat:dataset
+        dcat:OpenResearchLLMDist1 ,
+        dcat:CommercialProductDist2 ,
+        dcat:CopyleftViolatingModelDist3 ,
+        dcat:PrematureRAGDist4 ,
+        dcat:GPAIMultiSourceDist5 ,
+        dcat:UnauthorisedDistillationDist6 ,
+        dcat:MITStudentDist7 ,
+        dcat:NetworkAPIDist8 ,
+        dcat:RLHFAlignedDist9 ,
+        dcat:OpenModelSyntheticDist10 ,
+        dcat:GeneratorRAGDist11 ,
+        dcat:MoEMergedDist12 ,
+        dcat:ExecutorLLMDist13 ,
+        dcat:GPAIAPIDist14 ,
+        dcat:ConsumerProductDist15 .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-1 — CC-BY Academic Corpus → Open Research LLM
+# Chain: CCBYCorpusDist1 → OpenResearchLLMDist1
+# Expected: ✓ COMPLIANT
+# Legal basis: DSM Art. 3(1); CC-BY 4.0 §3(a); OSAID 1.0
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:CCBYCorpusDist1
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "CC-BY Academic Corpus (UC-1 source)"@en ;
+    dct:issued "2026-01-01"^^xsd:date ;
+    dcat:accessURL <https://tara.tcd.ie/uc1-corpus> ;
+    dct:license <https://example.com/policy/OpenResearchLLMLicence> ;
+    aimd2:actorType "research" ;
+    aimd2:trainingDatasetURL <https://tara.tcd.ie/uc1-corpus> ;
+    odrl:hasPolicy <https://example.com/policy/OpenResearchLLMLicence> .
+
+dcat:OpenResearchLLMDist1
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Open Research LLM — OSAID-compliant (UC-1)"@en ;
+    dct:issued "2026-03-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/openresearch/llm-uc1> ;
+    dct:license <https://example.com/policy/OpenResearchLLMLicence> ;
+    aimd:derivedFromDistribution dcat:CCBYCorpusDist1 ;
+    aimd2:trainingDatasetURL <https://tara.tcd.ie/uc1-corpus> ;
+    aimd2:modelWeightsURL <https://huggingface.co/openresearch/llm-uc1> ;
+    aimd2:downstreamLicenceURI <https://example.com/policy/OpenResearchLLMLicence> ;
+    aimd2:article50PolicyURL <https://openresearch.example.com/art50/uc1> ;
+    aimd2:actorType "research" ;
+    odrl:hasPolicy <https://example.com/policy/OpenResearchLLMLicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ; prov:used dcat:CCBYCorpusDist1 ] .
+
+# propagatesObligationTo: CC-BY attribution must flow to all downstream policies
+<https://example.com/policy/OpenResearchLLMLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/OpenResearchLLMLicence> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-2 — CC-BY-NC Dataset → Commercial AI Product
+# Chain: CCBYNCDatasetDist2 → CommercialProductDist2
+# Expected: ✗ CONFLICT — NC prohibition vs commercial actor
+# Legal basis: CC-BY-NC §3(b); DSM Art. 4(3); EU AI Act Art. 53(1)(c)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:CCBYNCDatasetDist2
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "CC-BY-NC Training Dataset (UC-2 source)"@en ;
+    dct:issued "2025-06-01"^^xsd:date ;
+    dcat:accessURL <https://example.com/nc-dataset> ;
+    dct:license <https://example.com/policy/CommercialConflictLicence> ;
+    odrl:hasPolicy <https://example.com/policy/CommercialConflictLicence> .
+
+dcat:CommercialProductDist2
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Commercial AI Product trained on NC dataset (UC-2)"@en ;
+    dct:issued "2026-03-01"^^xsd:date ;
+    dcat:accessURL <https://example.com/commercial-product-v2> ;
+    dct:license <https://example.com/policy/GPAILicence> ;
+    aimd:derivedFromDistribution dcat:CCBYNCDatasetDist2 ;
+    aimd2:actorType "commercial" ;
+    aimd2:trainingDatasetURL <https://example.com/nc-dataset> ;
+    odrl:hasPolicy <https://example.com/policy/GPAILicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ; prov:used dcat:CCBYNCDatasetDist2 ] .
+
+<https://example.com/policy/CommercialConflictLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/CommercialConflictLicence> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-3 — CC-BY-SA Corpus → Fine-Tuned Model (copyleft violation)
+# Chain: CCBYSACorpusDist3 → CopyleftViolatingModelDist3
+# Expected: ✗ VIOLATION — downstreamLicenceURI absent (ShareAlike not honoured)
+# Legal basis: CC-BY-SA §3(b); Andersen v. Stability AI; Jewitt et al. 2025
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:CCBYSACorpusDist3
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "CC-BY-SA Training Corpus (UC-3 source)"@en ;
+    dct:issued "2024-01-01"^^xsd:date ;
+    dcat:accessURL <https://example.com/sa-corpus> ;
+    dct:license <https://example.com/policy/CopyleftPropagationLicence> ;
+    odrl:hasPolicy <https://example.com/policy/CopyleftPropagationLicence> .
+
+dcat:CopyleftViolatingModelDist3
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Fine-tuned model — ShareAlike obligation stripped (UC-3)"@en ;
+    dct:issued "2026-04-01"^^xsd:date ;
+    dcat:accessURL <https://example.com/copyleft-model-v3> ;
+    dct:license <https://example.com/policy/GPAILicence> ;
+    aimd:derivedFromDistribution dcat:CCBYSACorpusDist3 ;
+    aimd2:baseModelURL <https://example.com/sa-corpus> ;
+    odrl:hasPolicy <https://example.com/policy/GPAILicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ; prov:used dcat:CCBYSACorpusDist3 ] .
+
+<https://example.com/policy/CopyleftPropagationLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/CopyleftPropagationLicence> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-4 — Embargoed Preprint → Premature RAG Ingestion
+# Chain: EmbargoedPreprintDist4 → PrematureRAGDist4
+# Expected: ✗ EMBARGO ACTIVE (EmbargoEndDate 2027-06-30 > 2026-06-30)
+# Legal basis: DSM Art. 3(1) lawful access; TCD TARA embargo policy
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:EmbargoedPreprintDist4
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Embargoed PhD Preprint — TCD TARA (UC-4 source)"@en ;
+    dct:issued "2025-09-01"^^xsd:date ;
+    dcat:accessURL <https://tara.tcd.ie/embargo/preprint-uc4> ;
+    dct:license <https://example.com/policy/EmbargoedCorpusLicence> ;
+    aimd2:EmbargoEndDate "2027-06-30"^^xsd:date ;
+    odrl:hasPolicy <https://example.com/policy/EmbargoedCorpusLicence> .
+
+dcat:PrematureRAGDist4
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "RAG System ingesting embargoed preprint (UC-4)"@en ;
+    dct:issued "2026-06-30"^^xsd:date ;
+    dcat:accessURL <https://example.com/rag-system-uc4> ;
+    dct:license <https://example.com/policy/RAGPolicySetLicence> ;
+    aimd:derivedFromDistribution dcat:EmbargoedPreprintDist4 ;
+    aimd2:ragCorpusPolicy <https://example.com/policy/EmbargoedCorpusLicence> ;
+    aimd2:EmbargoEndDate "2027-06-30"^^xsd:date ;
+    odrl:hasPolicy <https://example.com/policy/RAGPolicySetLicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ; prov:used dcat:EmbargoedPreprintDist4 ] .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-5 — Multi-Source CC-BY + CC-BY-NC + CC-BY-SA → GPAI Model
+# Chain: MultiSourceDist5A + MultiSourceDist5B + MultiSourceDist5C → GPAIMultiSourceDist5
+# Expected: ✗ MULTI-SOURCE CONFLICT — NC source + commercial actor
+# Legal basis: EU AI Act Art. 53(1)(c); DSM Art. 3/4; DALICC dep-graph
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:MultiSourceCCBYDist5
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "CC-BY source dataset (UC-5, source A)"@en ;
+    dct:issued "2023-01-01"^^xsd:date ;
+    dcat:accessURL <https://example.com/ccby-source-uc5> ;
+    dct:license <https://example.com/policy/OpenResearchLLMLicence> ;
+    odrl:hasPolicy <https://example.com/policy/OpenResearchLLMLicence> .
+
+dcat:MultiSourceCCBYNCDist5
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "CC-BY-NC source dataset (UC-5, source B)"@en ;
+    dct:issued "2023-02-01"^^xsd:date ;
+    dcat:accessURL <https://example.com/ccbync-source-uc5> ;
+    dct:license <https://example.com/policy/CommercialConflictLicence> ;
+    odrl:hasPolicy <https://example.com/policy/CommercialConflictLicence> .
+
+dcat:MultiSourceCCBYSADist5
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "CC-BY-SA source dataset (UC-5, source C)"@en ;
+    dct:issued "2023-03-01"^^xsd:date ;
+    dcat:accessURL <https://example.com/ccbysa-source-uc5> ;
+    dct:license <https://example.com/policy/CopyleftPropagationLicence> ;
+    odrl:hasPolicy <https://example.com/policy/CopyleftPropagationLicence> .
+
+dcat:GPAIMultiSourceDist5
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "GPAI model — multi-source training with NC conflict (UC-5)"@en ;
+    dct:issued "2026-05-01"^^xsd:date ;
+    dcat:accessURL <https://example.com/gpai-multi-source-uc5> ;
+    dct:license <https://example.com/policy/GPAILicence> ;
+    aimd:derivedFromDistribution dcat:MultiSourceCCBYDist5 ;
+    aimd:derivedFromDistribution dcat:MultiSourceCCBYNCDist5 ;
+    aimd:derivedFromDistribution dcat:MultiSourceCCBYSADist5 ;
+    aimd2:actorType "commercial" ;
+    aimd2:trainingDatasetURL <https://example.com/multi-source-summary-uc5> ;
+    odrl:hasPolicy <https://example.com/policy/GPAILicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ;
+        prov:used dcat:MultiSourceCCBYDist5 ;
+        prov:used dcat:MultiSourceCCBYNCDist5 ;
+        prov:used dcat:MultiSourceCCBYSADist5 ] .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-6 — Proprietary LLM API → Unauthorised Distillation → Open Student Model
+# Chain: ProprietaryLLMDist6 → UnauthorisedDistillationDist6
+# Expected: ✗ CONTRACTUAL PROHIBITION — ToS violation (not copyright)
+# Legal basis: Anthropic AUP; OpenAI ToS §2(c); US Copyright Office Part 2 (2025)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:ProprietaryLLMDist6
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Proprietary LLM API — distillation prohibited by ToS (UC-6 source)"@en ;
+    dct:issued "2024-01-01"^^xsd:date ;
+    dcat:accessURL <https://api.proprietaryllm.example.com/v1> ;
+    dct:license <https://example.com/policy/ProprietaryDistillationLicence> ;
+    odrl:hasPolicy <https://example.com/policy/ProprietaryDistillationLicence> .
+
+dcat:UnauthorisedDistillationDist6
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Unauthorised distillation of proprietary LLM outputs (UC-6)"@en ;
+    dct:issued "2026-02-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/anon/distilled-model-uc6> ;
+    dct:license <https://example.com/policy/OpenResearchLLMLicence> ;
+    aimd:derivedFromDistribution dcat:ProprietaryLLMDist6 ;
+    aimd2:actorType "competitor" ;
+    aimd2:trainingDatasetURL <https://api.proprietaryllm.example.com/v1> ;
+    odrl:hasPolicy <https://example.com/policy/OpenResearchLLMLicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ; prov:used dcat:ProprietaryLLMDist6 ] .
+
+<https://example.com/policy/ProprietaryDistillationLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/ProprietaryDistillationLicence> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-7 — Apache 2.0 Base Model → Fine-Tuning → MIT Student Model
+# Chain: ApacheBaseDist7 → MITStudentDist7
+# Expected: ✓ COMPLIANT — permissive-to-permissive, attribution preserved
+# Legal basis: Apache 2.0 §4/4(c); Jewitt et al. 2025
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:ApacheBaseDist7
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Apache 2.0 Base Model (UC-7 source)"@en ;
+    dct:issued "2024-06-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/apache-org/base-model-uc7> ;
+    dct:license <https://example.com/policy/ApacheMITChainLicence> ;
+    odrl:hasPolicy <https://example.com/policy/ApacheMITChainLicence> .
+
+dcat:MITStudentDist7
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "MIT-relicensed fine-tune — attribution preserved (UC-7)"@en ;
+    dct:issued "2026-05-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/student/mit-finetune-uc7> ;
+    dct:license <https://example.com/policy/ApacheMITChainLicence> ;
+    aimd:derivedFromDistribution dcat:ApacheBaseDist7 ;
+    aimd2:baseModelURL <https://huggingface.co/apache-org/base-model-uc7> ;
+    aimd2:modelWeightsURL <https://huggingface.co/student/mit-finetune-uc7> ;
+    aimd2:downstreamLicenceURI <https://example.com/policy/ApacheMITChainLicence> ;
+    aimd2:article50PolicyURL <https://example.com/uc7/art50> ;
+    odrl:hasPolicy <https://example.com/policy/ApacheMITChainLicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ; prov:used dcat:ApacheBaseDist7 ] .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-8 — Apache 2.0 → AGPL Fine-Tune → Network API Deployment
+# Chain: ApacheBaseNetworkDist8 → AGPLFineTuneDist8 → NetworkAPIDist8
+# Expected: ✗ AGPL §13 VIOLATION — network deployment without source disclosure
+# Legal basis: AGPLv3 §13; Black Duck OSSRA network-copyleft tier
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:ApacheBaseNetworkDist8
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Apache 2.0 Base Model (UC-8 source)"@en ;
+    dct:issued "2024-01-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/apache-org/base-model-uc8> ;
+    dct:license <https://example.com/policy/ApacheMITChainLicence> ;
+    odrl:hasPolicy <https://example.com/policy/ApacheMITChainLicence> .
+
+dcat:AGPLFineTuneDist8
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "AGPL fine-tuned model (UC-8 intermediate)"@en ;
+    dct:issued "2025-06-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/agpl-org/fine-tune-uc8> ;
+    dct:license <https://example.com/policy/AGPLNetworkLicence> ;
+    aimd:derivedFromDistribution dcat:ApacheBaseNetworkDist8 ;
+    aimd2:baseModelURL <https://huggingface.co/apache-org/base-model-uc8> ;
+    odrl:hasPolicy <https://example.com/policy/AGPLNetworkLicence> .
+
+dcat:NetworkAPIDist8
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Network API deployment — AGPL §13 source not offered (UC-8)"@en ;
+    dct:issued "2026-03-01"^^xsd:date ;
+    dcat:accessURL <https://api.agpl-service.example.com/v1> ;
+    dct:license <https://example.com/policy/AGPLNetworkLicence> ;
+    aimd:derivedFromDistribution dcat:AGPLFineTuneDist8 ;
+    aimd2:deploymentContext "network" ;
+    odrl:hasPolicy <https://example.com/policy/AGPLNetworkLicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ; prov:used dcat:AGPLFineTuneDist8 ] .
+
+<https://example.com/policy/AGPLNetworkLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/AGPLNetworkLicence> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-9 — Open Model → RLHF on User Interactions → Aligned Successor
+# Chain: OpenModelDist9 → RLHFAlignedDist9
+# Expected: ✗ RLHF CONSENT MISSING — rlhfDataPolicy declared, consent absent
+# Legal basis: GDPR Art. 6/13/14; EU AI Act Art. 10
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:OpenModelDist9
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Open base model (UC-9 source)"@en ;
+    dct:issued "2024-06-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/openorg/base-uc9> ;
+    dct:license <https://example.com/policy/OpenResearchLLMLicence> ;
+    odrl:hasPolicy <https://example.com/policy/OpenResearchLLMLicence> .
+
+dcat:RLHFAlignedDist9
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "RLHF-aligned successor — GDPR consent absent (UC-9)"@en ;
+    dct:issued "2026-04-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/openorg/rlhf-aligned-uc9> ;
+    dct:license <https://example.com/policy/RLHFAlignedModelLicence> ;
+    aimd:derivedFromDistribution dcat:OpenModelDist9 ;
+    aimd2:rlhfDataPolicy <https://example.com/uc9/rlhf-policy> ;
+    odrl:hasPolicy <https://example.com/policy/RLHFAlignedModelLicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ; prov:used dcat:OpenModelDist9 ] .
+
+<https://example.com/policy/RLHFAlignedModelLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/RLHFAlignedModelLicence> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-10 — Proprietary Teacher → Synthetic Data → Open Model
+# Chain: ProprietaryTeacherDist10 → SyntheticDataDist10 → OpenModelSyntheticDist10
+# Expected: ✗ ART. 53 DISCLOSURE GAP — synthetic provenance not in Art. 50 declaration
+# Legal basis: EU AI Act Art. 53(1)(c); Recitals 107-110; Phi-1/Orca
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:ProprietaryTeacherDist10
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Proprietary teacher LLM (UC-10 source)"@en ;
+    dct:issued "2023-01-01"^^xsd:date ;
+    dcat:accessURL <https://api.teacher-llm.example.com/v1> ;
+    dct:license <https://example.com/policy/ProprietaryDistillationLicence> ;
+    odrl:hasPolicy <https://example.com/policy/ProprietaryDistillationLicence> .
+
+dcat:SyntheticDataDist10
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Synthetic training corpus generated by proprietary teacher (UC-10)"@en ;
+    dct:issued "2024-01-01"^^xsd:date ;
+    dcat:accessURL <https://datasets.example.com/synthetic-uc10> ;
+    dct:license <https://example.com/policy/SyntheticDataDisclosureLicence> ;
+    aimd:derivedFromDistribution dcat:ProprietaryTeacherDist10 ;
+    aimd2:dataGenerationMethod "synthetic-from-proprietary-teacher" ;
+    odrl:hasPolicy <https://example.com/policy/SyntheticDataDisclosureLicence> .
+
+dcat:OpenModelSyntheticDist10
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Open model trained on synthetic corpus — Art. 53 disclosure gap (UC-10)"@en ;
+    dct:issued "2026-04-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/openorg/synthetic-trained-uc10> ;
+    dct:license <https://example.com/policy/OpenResearchLLMLicence> ;
+    aimd:derivedFromDistribution dcat:SyntheticDataDist10 ;
+    aimd2:trainingDatasetURL <https://datasets.example.com/synthetic-uc10> ;
+    aimd2:dataGenerationMethod "synthetic-from-proprietary-teacher" ;
+    odrl:hasPolicy <https://example.com/policy/OpenResearchLLMLicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ; prov:used dcat:SyntheticDataDist10 ] .
+
+<https://example.com/policy/SyntheticDataDisclosureLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/SyntheticDataDisclosureLicence> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-11 — Retriever Model + Corpus → Generator Model → RAG Output
+# Chain: RetrieverDist11 + CorpusDist11 → GeneratorRAGDist11
+# Expected: multi-asset PolicySet compliance
+# Legal basis: IDS-RAM 4.0; W3C ODRL PolicySet; Lewis et al. 2020
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:RetrieverDist11
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Retriever model (UC-11 source A)"@en ;
+    dct:issued "2024-01-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/retriever-org/retriever-uc11> ;
+    dct:license <https://example.com/policy/RetrieverModelLicence> ;
+    odrl:hasPolicy <https://example.com/policy/RetrieverModelLicence> .
+
+dcat:CorpusDist11
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Document corpus for RAG (UC-11 source B)"@en ;
+    dct:issued "2023-01-01"^^xsd:date ;
+    dcat:accessURL <https://datasets.example.com/corpus-uc11> ;
+    dct:license <https://example.com/policy/RAGCorpusLicence> ;
+    odrl:hasPolicy <https://example.com/policy/RAGCorpusLicence> .
+
+dcat:GeneratorRAGDist11
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "RAG generator service — dual-licence PolicySet satisfied (UC-11)"@en ;
+    dct:issued "2026-05-01"^^xsd:date ;
+    dcat:accessURL <https://api.rag-service.example.com/v1> ;
+    dct:license <https://example.com/policy/RAGPolicySetLicence> ;
+    aimd:derivedFromDistribution dcat:RetrieverDist11 ;
+    aimd:derivedFromDistribution dcat:CorpusDist11 ;
+    aimd2:ragCorpusPolicy <https://example.com/policy/RAGCorpusLicence> ;
+    aimd2:inferenceEndpointURL <https://api.rag-service.example.com/v1> ;
+    aimd2:article50PolicyURL <https://example.com/uc11/art50> ;
+    odrl:hasPolicy <https://example.com/policy/RAGPolicySetLicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ;
+        prov:used dcat:RetrieverDist11 ;
+        prov:used dcat:CorpusDist11 ] .
+
+<https://example.com/policy/RetrieverModelLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/RAGCorpusLicence> .
+<https://example.com/policy/RAGCorpusLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/RAGPolicySet> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-12 — Expert A + Expert B + Expert C → MoE Merged Model
+# Chain: ExpertADist12 + ExpertBDist12 + ExpertCDist12 → MoEMergedDist12
+# Expected: ✗ MOE OBLIGATION INHERITANCE FAILURE — Llama MAU not propagated
+# Legal basis: Meta Llama Community License §2; Jewitt et al. 2025
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:ExpertADist12
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Expert A — Apache 2.0 model (UC-12 source)"@en ;
+    dct:issued "2024-01-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/expert-a/model-uc12> ;
+    dct:license <https://example.com/policy/OpenResearchLLMLicence> ;
+    odrl:hasPolicy <https://example.com/policy/OpenResearchLLMLicence> .
+
+dcat:ExpertBDist12
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Expert B — Llama Community License (700M MAU threshold) (UC-12)"@en ;
+    dct:issued "2024-02-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/meta/llama-expert-uc12> ;
+    dct:license <https://example.com/policy/MoEMergedModelLicence> ;
+    odrl:hasPolicy <https://example.com/policy/MoEMergedModelLicence> .
+
+dcat:ExpertCDist12
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Expert C — Apache 2.0 model (UC-12 source)"@en ;
+    dct:issued "2024-03-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/apache-org/expert-c-uc12> ;
+    dct:license <https://example.com/policy/ApacheMITChainLicence> ;
+    odrl:hasPolicy <https://example.com/policy/ApacheMITChainLicence> .
+
+dcat:MoEMergedDist12
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "MoE merged model — Llama obligation inheritance failure (UC-12)"@en ;
+    dct:issued "2026-05-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/moe-org/merged-uc12> ;
+    dct:license <https://example.com/policy/OpenResearchLLMLicence> ;
+    aimd:derivedFromDistribution dcat:ExpertADist12 ;
+    aimd:derivedFromDistribution dcat:ExpertBDist12 ;
+    aimd:derivedFromDistribution dcat:ExpertCDist12 ;
+    aimd2:modelWeightsURL <https://huggingface.co/moe-org/merged-uc12> ;
+    odrl:hasPolicy <https://example.com/policy/OpenResearchLLMLicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ;
+        prov:used dcat:ExpertADist12 ;
+        prov:used dcat:ExpertBDist12 ;
+        prov:used dcat:ExpertCDist12 ] .
+
+# propagatesObligationTo: ALL expert policies must propagate to the merged model
+<https://example.com/policy/MoEMergedModelLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/MoEMergedModelLicence> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-13 — Planner LLM (A) → Structured Plan → Executor LLM (B) → Actions
+# Chain: PlannerLLMDist13 → ExecutorLLMDist13
+# Expected: ✓ INFERENCE CHAIN EXEMPT — no training obligations triggered
+# Legal basis: W3C ODRL AI Vocab ai-augment; ReAct (Yao 2023)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:PlannerLLMDist13
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Planner LLM in multi-agent chain (UC-13 source)"@en ;
+    dct:issued "2025-01-01"^^xsd:date ;
+    dcat:accessURL <https://api.planner-llm.example.com/v1> ;
+    dct:license <https://example.com/policy/InferenceChainLicence> ;
+    aimd2:inferenceEndpointURL <https://api.planner-llm.example.com/v1> ;
+    odrl:hasPolicy <https://example.com/policy/InferenceChainLicence> .
+
+dcat:ExecutorLLMDist13
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Executor LLM in planner-executor chain — inference only (UC-13)"@en ;
+    dct:issued "2025-01-01"^^xsd:date ;
+    dcat:accessURL <https://api.executor-llm.example.com/v1> ;
+    dct:license <https://example.com/policy/InferenceChainLicence> ;
+    aimd:derivedFromDistribution dcat:PlannerLLMDist13 ;
+    aimd2:inferenceEndpointURL <https://api.executor-llm.example.com/v1> ;
+    aimd2:deploymentContext "inference-chain" ;
+    odrl:hasPolicy <https://example.com/policy/InferenceChainLicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ; prov:used dcat:PlannerLLMDist13 ] .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-14 — CC-BY Corpus → Base LLM → Domain Fine-Tune → GPAI API (3-hop)
+# Chain: CCBYCorpusDist14 → BaseLLMDist14 → FineTunedDist14 → GPAIAPIDist14
+# Expected: ✓ COMPLIANT — flagship 3-hop chain with full Art. 53 provenance
+# Legal basis: EU AI Act Art. 53(1)(c); extends Diya Mathew BAI §3.2
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:CCBYCorpusDist14
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "CC-BY academic corpus — hop 0 (UC-14 source)"@en ;
+    dct:issued "2022-01-01"^^xsd:date ;
+    dcat:accessURL <https://tara.tcd.ie/uc14-corpus> ;
+    dct:license <https://example.com/policy/OpenResearchLLMLicence> ;
+    aimd2:trainingDatasetURL <https://tara.tcd.ie/uc14-corpus> ;
+    odrl:hasPolicy <https://example.com/policy/OpenResearchLLMLicence> .
+
+dcat:BaseLLMDist14
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Base LLM — hop 1 (UC-14)"@en ;
+    dct:issued "2023-06-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/openresearch/base-llm-uc14> ;
+    dct:license <https://example.com/policy/OpenResearchLLMLicence> ;
+    aimd:derivedFromDistribution dcat:CCBYCorpusDist14 ;
+    aimd2:trainingDatasetURL <https://tara.tcd.ie/uc14-corpus> ;
+    aimd2:modelWeightsURL <https://huggingface.co/openresearch/base-llm-uc14> ;
+    aimd2:downstreamLicenceURI <https://example.com/policy/OpenResearchLLMLicence> ;
+    aimd2:article50PolicyURL <https://example.com/uc14/hop1-art50> ;
+    odrl:hasPolicy <https://example.com/policy/OpenResearchLLMLicence> .
+
+dcat:FineTunedDist14
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Domain fine-tuned model — hop 2 (UC-14)"@en ;
+    dct:issued "2024-06-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/domainai/finetuned-uc14> ;
+    dct:license <https://example.com/policy/OpenResearchLLMLicence> ;
+    aimd:derivedFromDistribution dcat:BaseLLMDist14 ;
+    aimd2:baseModelURL <https://huggingface.co/openresearch/base-llm-uc14> ;
+    aimd2:modelWeightsURL <https://huggingface.co/domainai/finetuned-uc14> ;
+    aimd2:downstreamLicenceURI <https://example.com/policy/OpenResearchLLMLicence> ;
+    aimd2:article50PolicyURL <https://example.com/uc14/hop2-art50> ;
+    aimd2:trainingDatasetURL <https://tara.tcd.ie/uc14-corpus> ;
+    odrl:hasPolicy <https://example.com/policy/OpenResearchLLMLicence> .
+
+dcat:GPAIAPIDist14
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "GPAI API deployment — hop 3, full 3-hop provenance disclosed (UC-14)"@en ;
+    dct:issued "2026-01-01"^^xsd:date ;
+    dcat:accessURL <https://api.gpai.example.com/v1/uc14> ;
+    dct:license <https://example.com/policy/OpenResearchLLMLicence> ;
+    aimd:derivedFromDistribution dcat:FineTunedDist14 ;
+    aimd2:inferenceEndpointURL <https://api.gpai.example.com/v1/uc14> ;
+    aimd2:modelWeightsURL <https://huggingface.co/domainai/finetuned-uc14> ;
+    aimd2:article50PolicyURL <https://example.com/uc14/hop3-art50> ;
+    aimd2:trainingDatasetURL <https://tara.tcd.ie/uc14-corpus> ;
+    aimd2:downstreamLicenceURI <https://example.com/policy/OpenResearchLLMLicence> ;
+    odrl:hasPolicy <https://example.com/policy/OpenResearchLLMLicence> ;
+    prov:wasGeneratedBy [
+        a prov:Activity ;
+        prov:used dcat:FineTunedDist14 ;
+        prov:used dcat:BaseLLMDist14 ;
+        prov:used dcat:CCBYCorpusDist14 ;
+    ] .
+
+# 3-hop obligation propagation chain
+<https://example.com/policy/OpenResearchLLMLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/OpenResearchLLMLicence> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UC-15 — Proprietary Data → Closed Model → Distillation → MoE → Consumer Product
+# Chain: PropDataDist15 → ClosedModelDist15 → DistillationDist15 →
+#        MoEMergeStepDist15 → ConsumerProductDist15
+# Expected: ✗ CASCADING UNRESOLVABLE — 3 simultaneous conflict types
+# Legal basis: EU AI Act Art. 53(1)(c); EU Commission Draft Guidelines 19 May 2026;
+#              Meta Llama Community License §2; OWASP SCVS BOM
+# ═══════════════════════════════════════════════════════════════════════════════
+
+dcat:PropDataDist15
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Proprietary training data — undisclosed (UC-15 hop 0)"@en ;
+    dct:issued "2020-01-01"^^xsd:date ;
+    dcat:accessURL <https://example.com/proprietary-data-uc15> ;
+    dct:license <https://example.com/policy/ProprietaryDistillationLicence> ;
+    odrl:hasPolicy <https://example.com/policy/ProprietaryDistillationLicence> .
+
+dcat:ClosedModelDist15
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Closed model trained on proprietary data (UC-15 hop 1)"@en ;
+    dct:issued "2022-01-01"^^xsd:date ;
+    dcat:accessURL <https://example.com/closed-model-uc15> ;
+    dct:license <https://example.com/policy/ProprietaryDistillationLicence> ;
+    aimd:derivedFromDistribution dcat:PropDataDist15 ;
+    aimd2:actorType "competitor" ;
+    odrl:hasPolicy <https://example.com/policy/ProprietaryDistillationLicence> .
+
+dcat:DistillationDist15
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Distillation of closed model — ToS violation (UC-15 hop 2)"@en ;
+    dct:issued "2024-01-01"^^xsd:date ;
+    dcat:accessURL <https://huggingface.co/anon/distilled-uc15> ;
+    dct:license <https://example.com/policy/CascadingConflictLicence> ;
+    aimd:derivedFromDistribution dcat:ClosedModelDist15 ;
+    aimd2:actorType "competitor" ;
+    aimd2:dataGenerationMethod "synthetic-from-proprietary-teacher" ;
+    odrl:hasPolicy <https://example.com/policy/CascadingConflictLicence> .
+
+dcat:MoEMergeStepDist15
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "MoE merge — Llama obligations not inherited (UC-15 hop 3)"@en ;
+    dct:issued "2025-01-01"^^xsd:date ;
+    dcat:accessURL <https://example.com/moe-stage-uc15> ;
+    dct:license <https://example.com/policy/CascadingConflictLicence> ;
+    aimd:derivedFromDistribution dcat:DistillationDist15 ;
+    aimd:derivedFromDistribution dcat:ExpertBDist12 ;
+    aimd2:dataGenerationMethod "synthetic-from-proprietary-teacher" ;
+    odrl:hasPolicy <https://example.com/policy/CascadingConflictLicence> .
+
+dcat:ConsumerProductDist15
+    a dcat:Distribution, aimd:AIModelDistribution ;
+    dct:title "Consumer product — cascading unresolvable conflicts (UC-15 hop 4)"@en ;
+    dct:issued "2026-06-01"^^xsd:date ;
+    dcat:accessURL <https://consumer-product.example.com/v1> ;
+    dct:license <https://example.com/policy/CascadingConflictLicence> ;
+    aimd:derivedFromDistribution dcat:MoEMergeStepDist15 ;
+    aimd2:deploymentContext "network" ;
+    aimd2:dataGenerationMethod "synthetic-from-proprietary-teacher" ;
+    odrl:hasPolicy <https://example.com/policy/CascadingConflictLicence> ;
+    prov:wasGeneratedBy [ a prov:Activity ; prov:used dcat:MoEMergeStepDist15 ] .
+
+<https://example.com/policy/CascadingConflictLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/CascadingConflictLicence> .
+
+# ── Missing propagatesObligationTo links (licences without self-referential links) ──
+<https://example.com/policy/EmbargoedCorpusLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/EmbargoedCorpusLicence> .
+
+<https://example.com/policy/ApacheMITChainLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/ApacheMITChainLicence> .
+
+<https://example.com/policy/InferenceChainLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/InferenceChainLicence> .
+
+<https://example.com/policy/RAGPolicySetLicence>
+    aimd2:propagatesObligationTo <https://example.com/policy/RAGPolicySetLicence> .

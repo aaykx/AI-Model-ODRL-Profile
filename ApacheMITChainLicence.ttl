@@ -1,0 +1,52 @@
+﻿@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ApacheMITChainLicence  (Use Case 7)
+#  Models Apache 2.0 fine-tuned to an MIT-licensed student model.
+#  Apache 2.0 §4 requires attribution and NOTICE preservation, but imposes
+#  no copyleft — downstream can be relicensed to MIT. Jewitt et al. (2025)
+#  found attribution metadata is frequently stripped at relicensing.
+#
+#  Expected compliance result: ✓ COMPLIANT (permissive-to-permissive baseline)
+#  Condition: attribution metadata (baseModelURL + NOTICE) must survive.
+#  Legal basis: Apache 2.0 §4/4(c); Jewitt et al. (2025) §4.2.
+# ─────────────────────────────────────────────────────────────────────────────
+
+<https://example.com/policy/ApacheMITChainLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "Apache 2.0 Base Model → MIT Fine-Tune Chain Licence" ;
+    dct:description "Permits fine-tuning an Apache 2.0 model and relicensing the derivative to MIT, provided attribution and NOTICE files are preserved. No copyleft — downstream MIT licence is compatible. The actual failure mode (per Jewitt 2025) is silent attribution loss, not a legal incompatibility." ;
+    dct:created "2026-06-30"^^xsd:date ;
+    dct:references <https://www.apache.org/licenses/LICENSE-2.0> ;
+
+    # ── PERMISSION: fine-tuning with attribution duty ────────────────────────
+    odrl:permission [
+        odrl:target   <https://example.com/assets/ApacheBaseModel> ;
+        odrl:assigner <https://example.com/ApacheModelPublisher> ;
+        odrl:action   aimd2:FineTuning ;
+
+        # ── Attribution obligations (Apache 2.0 §4/4(c)) ─────────────────────
+        odrl:duty [
+            odrl:action aimd2:InheritSourceLicence ; # carry baseModelURL
+        ] ;
+        odrl:duty [
+            odrl:action aimd2:ModelSharing ;         # publish new model weights
+        ] ;
+    ] ;
+
+    # ── PERMISSION: sharing the fine-tuned model under MIT ───────────────────
+    odrl:permission [
+        odrl:target   <https://example.com/assets/ApacheBaseModel> ;
+        odrl:assigner <https://example.com/ApacheModelPublisher> ;
+        odrl:action   aimd2:ModelSharing ;
+        odrl:constraint [
+            odrl:leftOperand  aimd2:downstreamLicence ;
+            odrl:operator     odrl:isA ;
+            odrl:rightOperand <https://example.com/policy/ApacheMITChainLicence> ; # permissive-compatible
+        ] ;
+    ] .

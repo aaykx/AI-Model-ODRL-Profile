@@ -1,0 +1,66 @@
+﻿@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  RLHFAlignedModelLicence  (Use Case 9)
+#  Models an open base model fine-tuned via RLHF using user interaction logs.
+#  GDPR Art. 6 requires a lawful basis for processing personal data;
+#  Art. 13/14 require transparency. EU AI Act Art. 10 requires GPAI data
+#  governance. Christiano et al. (2017) and Ouyang et al. (2022) establish
+#  the RLHF methodology.
+#
+#  Expected compliance result: ✗ if userConsentStatus is absent or not "given"
+#  Legal basis: GDPR Art. 6/13/14; EU AI Act Art. 10; C2PA Content Credentials.
+# ─────────────────────────────────────────────────────────────────────────────
+
+<https://example.com/policy/RLHFAlignedModelLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "RLHF Aligned Model Licence — Consent-Gated Human Feedback Training" ;
+    dct:description "Permits RLHF training on user interaction logs only where valid GDPR consent (Art. 6(1)(a)) or another lawful basis has been established and transparency notices (Art. 13/14) have been issued. Absent or withdrawn consent makes RLHF training unlawful regardless of the base model's openness." ;
+    dct:created "2026-06-30"^^xsd:date ;
+
+    # ── PERMISSION: RLHF training with valid consent ─────────────────────────
+    odrl:permission [
+        odrl:target   <https://example.com/assets/UserInteractionLogs> ;
+        odrl:assigner <https://example.com/AIProvider> ;
+        odrl:action   aimd2:RLHFTraining ;
+
+        # userConsentStatus must be "given"
+        odrl:constraint [
+            odrl:leftOperand  aimd2:userConsentStatus ;
+            odrl:operator     odrl:eq ;
+            odrl:rightOperand <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#ConsentGiven> ;
+        ] ;
+
+        # ── Obligations ───────────────────────────────────────────────────────
+        odrl:duty [
+            odrl:action aimd2:DeclareRLHFDataUse ;    # GDPR Art. 13/14 transparency
+        ] ;
+        odrl:duty [
+            odrl:action aimd2:ComplyWithArticle50 ;   # EU AI Act Art. 50
+        ] ;
+    ] ;
+
+    # ── PROHIBITION: RLHF without valid consent ───────────────────────────────
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/UserInteractionLogs> ;
+        odrl:action  aimd2:RLHFTraining ;
+        odrl:constraint [
+            odrl:leftOperand  aimd2:userConsentStatus ;
+            odrl:operator     odrl:neq ;
+            odrl:rightOperand <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#ConsentGiven> ;
+        ] ;
+    ] ;
+
+    # ── PROHIBITION: absent consent declaration ───────────────────────────────
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/UserInteractionLogs> ;
+        odrl:action  aimd2:RLHFTraining ;
+        # no constraint: this fires when userConsentStatus is entirely absent
+    ] ;
+
+    aimd2:propagatesObligationTo <https://example.com/policy/RLHFAlignedModelLicence> .

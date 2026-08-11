@@ -1,0 +1,435 @@
+﻿# AIMD_v2_SPARQL_queries.sparql
+# Reference SPARQL queries used by server_v2.js
+# Copy these into GraphDB SPARQL editor or use as templates in JavaScript.
+#
+# Prefix block (paste at top of any query in GraphDB):
+# PREFIX dcat:  <https://www.w3.org/ns/dcat#>
+# PREFIX odrl:  <http://www.w3.org/ns/odrl/2/>
+# PREFIX rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+# PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
+# PREFIX dct:   <http://purl.org/dc/terms/>
+# PREFIX aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#>
+# PREFIX aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#>
+# PREFIX xsd:   <http://www.w3.org/2001/XMLSchema#>
+# PREFIX skos:  <http://www.w3.org/2004/02/skos/core#>
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 1 — Load all v2 obligations
+# Returns all aimd2: Action terms with their compliance-checker metadata.
+# Used by checkNewV2Obligations() to load rules from the graph at runtime.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?action ?label ?evidenceProp ?severity ?checkDesc ?legalBasis
+WHERE {
+    ?action a odrl:Action ;
+            aimd:evidenceProperty ?evidenceProp .
+    FILTER(STRSTARTS(STR(?action), "https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#"))
+    OPTIONAL { ?action rdfs:label ?label }
+    OPTIONAL { ?action aimd:severity ?severity }
+    OPTIONAL { ?action aimd:checkDescription ?checkDesc }
+    OPTIONAL { ?action aimd:legalBasis ?legalBasis }
+}
+ORDER BY ?label
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 2 — Check evidenceProperty for a distribution (parameterised)
+# Replace DIST_URI with the full distribution URI (e.g. dcat:IrishLegalLLMDist1.5)
+# Replace EVIDENCE_PROP with the full evidence property URI.
+# Returns the declared value if present.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?value
+WHERE {
+    <DIST_URI> <EVIDENCE_PROP> ?value .
+}
+LIMIT 1
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 3 — Follow derivation chain (one hop)
+# Given a distribution URI, find its immediate upstream distribution or
+# research product. Used iteratively by checkNHopChain() for hop-by-hop
+# traversal with explicit maxHops control.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?parent ?parentType
+WHERE {
+    {
+        <DIST_URI> aimd:derivedFromDistribution ?parent .
+        BIND("distribution" AS ?parentType)
+    }
+    UNION
+    {
+        <DIST_URI> aimd:derivedFromResearchProduct ?parent .
+        BIND("researchProduct" AS ?parentType)
+    }
+}
+LIMIT 1
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 4 — Find all distributions in a PolicySet
+# Given a PolicySet URI, return all member policies and their targets.
+# Useful for RLHF and RAG licence set compliance checking.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?policy ?target ?assignee ?action
+WHERE {
+    <POLICYSET_URI> a odrl:PolicySet ;
+                    odrl:profile ?policy .
+    OPTIONAL {
+        ?policy odrl:permission ?perm .
+        OPTIONAL { ?perm odrl:target ?target }
+        OPTIONAL { ?perm odrl:assignee ?assignee }
+        OPTIONAL { ?perm odrl:action ?action }
+    }
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 5 — Check propagatesObligationTo chain
+# Given a distribution, find all upstream policies it must inherit from
+# via aimd2:propagatesObligationTo.
+# Used to trace obligation inheritance across multi-hop training pipelines.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?upstreamPolicy ?inheritedObligation ?obligationLabel
+WHERE {
+    <DIST_URI> odrl:hasPolicy ?distPolicy .
+    ?upstreamPolicy aimd2:propagatesObligationTo ?distPolicy .
+    OPTIONAL {
+        ?upstreamPolicy odrl:obligation ?ob .
+        ?ob odrl:action ?inheritedObligation .
+        OPTIONAL { ?inheritedObligation rdfs:label ?obligationLabel }
+    }
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 6 — Check aimd2:userConsentStatus for RLHF distributions
+# Returns the declared consent status for distributions that carry
+# rlhfDataPolicy, confirming GDPR Art. 13/14 compliance.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?dist ?consentStatus ?rlhfPolicy
+WHERE {
+    ?dist a aimd:AIModelDistribution .
+    OPTIONAL { ?dist aimd2:userConsentStatus ?consentStatus }
+    OPTIONAL { ?dist aimd2:rlhfDataPolicy ?rlhfPolicy }
+    FILTER(BOUND(?consentStatus) || BOUND(?rlhfPolicy))
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 7 — Full compliance summary for all distributions
+# Convenience query: shows each distribution alongside its licence and
+# whether the key v3.0 evidence properties are declared.
+# Useful for a quick dashboard view in GraphDB.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?dist ?licence
+       (BOUND(?co2) AS ?hasCO2)
+       (BOUND(?cp)  AS ?hasCopyrightPolicy)
+       (BOUND(?rp)  AS ?hasSourceProduct)
+WHERE {
+    ?dist a aimd:AIModelDistribution .
+    OPTIONAL { ?dist dct:license ?licence }
+    OPTIONAL { ?dist aimd:co2Disclosure ?co2 }
+    OPTIONAL { ?dist aimd:copyrightPolicy ?cp }
+    OPTIONAL { ?dist aimd:derivedFromResearchProduct ?rp }
+}
+ORDER BY ?dist
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 8 — Load ALL obligations (v3.0 + v2.0 combined)
+# The original verifyCompliance() query, extended to include both aimd and aimd2
+# namespace terms. Returns all checkable obligations in the graph.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?action ?label ?evidenceProp ?severity ?checkDesc ?legalBasis
+WHERE {
+    ?action a odrl:Action ;
+            aimd:evidenceProperty ?evidenceProp .
+    OPTIONAL { ?action rdfs:label ?label }
+    OPTIONAL { ?action aimd:severity ?severity }
+    OPTIONAL { ?action aimd:checkDescription ?checkDesc }
+    OPTIONAL { ?action aimd:legalBasis ?legalBasis }
+}
+ORDER BY ?severity ?label
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 9 — UC-1: CC-BY corpus → open research LLM (✓ expected)
+# Verifies that a CC-BY-trained open LLM distribution carries all three
+# required evidence properties: trainingDatasetURL, modelWeightsURL,
+# article50PolicyURL. Legal basis: DSM Art. 3; CC-BY 4.0; OSAID 1.0.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?dist ?trainingURL ?weightsURL ?art50URL ?actorType
+WHERE {
+    ?dist a aimd:AIModelDistribution ;
+          aimd:derivedFromDistribution ?parent .
+    ?parent dct:license <https://example.com/policy/OpenResearchLLMLicence> .
+    OPTIONAL { ?dist aimd2:trainingDatasetURL ?trainingURL }
+    OPTIONAL { ?dist aimd2:modelWeightsURL    ?weightsURL }
+    OPTIONAL { ?dist aimd2:article50PolicyURL ?art50URL }
+    OPTIONAL { ?dist aimd2:actorType          ?actorType }
+}
+ORDER BY ?dist
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 10 — UC-2: CC-BY-NC → commercial product conflict (✗ expected)
+# Detects NC-vs-commercial conflict: source has CommercialConflictLicence
+# AND derived distribution declares actorType="commercial".
+# Legal basis: CC-BY-NC 4.0 §3(b); DSM Art. 4(3); EU AI Act Art. 53(1)(c).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?derivedDist ?sourceLicence ?actorType
+       (IF(?actorType = "commercial" && STR(?sourceLicence) = "https://example.com/policy/CommercialConflictLicence",
+           "CONFLICT", "OK") AS ?status)
+WHERE {
+    ?derivedDist a aimd:AIModelDistribution ;
+                 aimd:derivedFromDistribution ?parent ;
+                 aimd2:actorType ?actorType .
+    ?parent dct:license ?sourceLicence .
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 11 — UC-3: CC-BY-SA → copyleft propagation check (✗ if missing)
+# Finds distributions derived from a ShareAlike source that lack a
+# compatible downstreamLicenceURI.
+# Legal basis: CC-BY-SA 4.0 §3(b) ShareAlike; Andersen v. Stability AI.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?derivedDist ?sourceLicence ?downstreamLic
+       (IF(BOUND(?downstreamLic), "CHECK_COMPATIBILITY", "MISSING") AS ?copyleftStatus)
+WHERE {
+    ?derivedDist a aimd:AIModelDistribution ;
+                 aimd:derivedFromDistribution ?parent .
+    ?parent dct:license <https://example.com/policy/CopyleftPropagationLicence> .
+    BIND(<https://example.com/policy/CopyleftPropagationLicence> AS ?sourceLicence)
+    OPTIONAL { ?derivedDist aimd2:downstreamLicenceURI ?downstreamLic }
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 12 — UC-4: Embargo temporal compliance check (✗ if before EmbargoEndDate)
+# Returns distributions with an active embargo (EmbargoEndDate in the future).
+# Replace NOW() with actual date in GraphDB if temporal functions differ.
+# Legal basis: DSM Art. 3(1) lawful access; TCD TARA embargo policy.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?dist ?embargoEnd
+       (IF(?embargoEnd > NOW(), "EMBARGO_ACTIVE", "EMBARGO_LAPSED") AS ?accessStatus)
+WHERE {
+    ?dist a aimd:AIModelDistribution ;
+          aimd2:EmbargoEndDate ?embargoEnd .
+}
+ORDER BY ?embargoEnd
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 13 — UC-5: Multi-source conflict detection (✗ expected — NC parent)
+# For a given distribution with multiple parents, returns each parent's
+# licence and whether it conflicts with the derived distribution's actor type.
+# Legal basis: EU AI Act Art. 53(1)(c); DSM Art. 3/4; DALICC dep-graph.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?derivedDist ?parent ?parentLicence ?actorType
+       (IF(STR(?parentLicence) = "https://example.com/policy/CommercialConflictLicence"
+           && ?actorType = "commercial",
+           "NC_CONFLICT", "OK") AS ?conflictFlag)
+WHERE {
+    ?derivedDist a aimd:AIModelDistribution ;
+                 aimd:derivedFromDistribution ?parent .
+    ?parent dct:license ?parentLicence .
+    OPTIONAL { ?derivedDist aimd2:actorType ?actorType }
+}
+ORDER BY ?derivedDist ?parent
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 14 — UC-6: Proprietary distillation prohibition (✗ expected)
+# Detects contractual-ToS violation: actorType=competitor + source has
+# ProprietaryDistillationLicence. Not a copyright claim.
+# Legal basis: Contractual ToS; US Copyright Office Part 2 (2025).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?dist ?actorType ?sourceLicence
+       (IF(?actorType = "competitor" && STR(?sourceLicence) = "https://example.com/policy/ProprietaryDistillationLicence",
+           "CONTRACTUAL_VIOLATION", "OK") AS ?violationFlag)
+WHERE {
+    ?dist a aimd:AIModelDistribution ;
+          aimd2:actorType ?actorType ;
+          aimd:derivedFromDistribution ?parent .
+    ?parent dct:license ?sourceLicence .
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 15 — UC-7: Apache 2.0 → MIT permissive chain (✓ expected)
+# Verifies attribution metadata (baseModelURL) survives relicensing.
+# The actual failure mode per Jewitt 2025 is silent attribution loss.
+# Legal basis: Apache 2.0 §4/4(c); Jewitt et al. (2025).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?dist ?baseModelURL ?weightsURL ?downstreamLic
+       (IF(BOUND(?baseModelURL) && BOUND(?weightsURL), "ATTRIBUTION_PRESERVED", "ATTRIBUTION_DROPPED") AS ?attributionStatus)
+WHERE {
+    ?dist a aimd:AIModelDistribution ;
+          aimd:derivedFromDistribution ?parent .
+    ?parent dct:license <https://example.com/policy/ApacheMITChainLicence> .
+    OPTIONAL { ?dist aimd2:baseModelURL        ?baseModelURL }
+    OPTIONAL { ?dist aimd2:modelWeightsURL      ?weightsURL }
+    OPTIONAL { ?dist aimd2:downstreamLicenceURI ?downstreamLic }
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 16 — UC-8: AGPL §13 network copyleft trigger (✗ expected)
+# Detects network deployment without source disclosure: deploymentContext=network
+# but modelWeightsURL absent from a distribution with an AGPL parent.
+# Legal basis: AGPLv3 §13; Black Duck OSSRA network-copyleft tier.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?dist ?deployCtx ?weightsURL ?parentLicence
+       (IF(?deployCtx = "network" && !BOUND(?weightsURL) &&
+           STR(?parentLicence) = "https://example.com/policy/AGPLNetworkLicence",
+           "AGPL_NETWORK_VIOLATION", "OK") AS ?agplFlag)
+WHERE {
+    ?dist a aimd:AIModelDistribution ;
+          aimd2:deploymentContext ?deployCtx ;
+          aimd:derivedFromDistribution ?parent .
+    ?parent dct:license ?parentLicence .
+    OPTIONAL { ?dist aimd2:modelWeightsURL ?weightsURL }
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 17 — UC-9: RLHF consent check (✗ expected — consent absent)
+# Returns distributions with rlhfDataPolicy but without userConsentStatus="given".
+# Legal basis: GDPR Art. 6/13/14; EU AI Act Art. 10.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?dist ?rlhfPolicy ?consentStatus
+       (IF(BOUND(?rlhfPolicy) && (!BOUND(?consentStatus) || ?consentStatus != "given"),
+           "CONSENT_MISSING_OR_INVALID", "OK") AS ?gdprStatus)
+WHERE {
+    ?dist a aimd:AIModelDistribution .
+    OPTIONAL { ?dist aimd2:rlhfDataPolicy    ?rlhfPolicy }
+    OPTIONAL { ?dist aimd2:userConsentStatus ?consentStatus }
+    FILTER(BOUND(?rlhfPolicy))
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 18 — UC-10: Synthetic data disclosure (✗ expected — Art. 53 gap)
+# Finds models trained on synthetic-from-proprietary-teacher data that
+# lack a declared article50PolicyURL.
+# Legal basis: EU AI Act Art. 53(1)(c); Recitals 107-110; Phi-1/Orca.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?dist ?dataGenMethod ?art50URL
+       (IF(?dataGenMethod = "synthetic-from-proprietary-teacher" && !BOUND(?art50URL),
+           "ART53_DISCLOSURE_GAP", "OK") AS ?disclosureStatus)
+WHERE {
+    ?dist a aimd:AIModelDistribution ;
+          aimd2:dataGenerationMethod ?dataGenMethod .
+    OPTIONAL { ?dist aimd2:article50PolicyURL ?art50URL }
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 19 — UC-11: RAG PolicySet multi-asset composition
+# Returns the RAG distribution with its two parent licences and the
+# ragCorpusPolicy declaration. Both licences must be present.
+# Legal basis: IDS-RAM 4.0; W3C ODRL PolicySet; Lewis et al. 2020.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?ragDist ?ragPolicy (COUNT(?parent) AS ?parentCount) (GROUP_CONCAT(STR(?parentLicence); separator="; ") AS ?allLicences)
+WHERE {
+    ?ragDist a aimd:AIModelDistribution ;
+             aimd2:ragCorpusPolicy ?ragPolicy ;
+             aimd:derivedFromDistribution ?parent .
+    ?parent dct:license ?parentLicence .
+}
+GROUP BY ?ragDist ?ragPolicy
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 20 — UC-12: MoE expert obligation inheritance (✗ expected)
+# Checks whether the merged MoE model carries the same licence as the
+# most restrictive expert (Llama MAU threshold must propagate).
+# Legal basis: Meta Llama Community License §2; Jewitt et al. (2025).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?mergedDist ?mergedLicence ?expert ?expertLicence
+       (IF(STR(?expertLicence) = "https://example.com/policy/MoEMergedModelLicence"
+           && STR(?mergedLicence) != "https://example.com/policy/MoEMergedModelLicence",
+           "MOE_OBLIGATION_LOST", "OK") AS ?inheritanceFlag)
+WHERE {
+    ?mergedDist a aimd:AIModelDistribution ;
+                aimd:derivedFromDistribution ?expert ;
+                dct:license ?mergedLicence .
+    ?expert dct:license ?expertLicence .
+}
+ORDER BY ?mergedDist ?expert
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 21 — UC-13: Inference chain exemption (✓ expected — true negative)
+# Confirms planner→executor chain has InferenceChainLicence and lacks
+# any training-side evidence properties. Tests over-triggering prevention.
+# Legal basis: W3C ODRL AI Vocab ai-augment vs ai-training; ReAct (Yao 2023).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?executorDist ?licence ?deployCtx ?trainingURL ?baseModelURL
+WHERE {
+    ?executorDist a aimd:AIModelDistribution ;
+                  dct:license <https://example.com/policy/InferenceChainLicence> .
+    OPTIONAL { ?executorDist aimd2:deploymentContext   ?deployCtx }
+    OPTIONAL { ?executorDist aimd2:trainingDatasetURL  ?trainingURL }
+    OPTIONAL { ?executorDist aimd2:baseModelURL        ?baseModelURL }
+    BIND(<https://example.com/policy/InferenceChainLicence> AS ?licence)
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 22 — UC-14: 3-hop CC-BY corpus → GPAI API (✓ expected)
+# Walks all hops via aimd:derivedFromDistribution and checks each has
+# the required evidence properties for full Art. 53 provenance disclosure.
+# Legal basis: EU AI Act Art. 53(1)(c); Diya Mathew BAI Diss. §3.2 (extended).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?dist ?hop ?trainingURL ?weightsURL ?art50URL
+WHERE {
+    {
+        BIND(dcat:GPAIAPIDist14 AS ?dist) BIND(0 AS ?hop)
+    } UNION {
+        dcat:GPAIAPIDist14 aimd:derivedFromDistribution ?dist .
+        BIND(1 AS ?hop)
+    } UNION {
+        dcat:GPAIAPIDist14 aimd:derivedFromDistribution/aimd:derivedFromDistribution ?dist .
+        BIND(2 AS ?hop)
+    } UNION {
+        dcat:GPAIAPIDist14 aimd:derivedFromDistribution/aimd:derivedFromDistribution/aimd:derivedFromDistribution ?dist .
+        BIND(3 AS ?hop)
+    }
+    OPTIONAL { ?dist aimd2:trainingDatasetURL ?trainingURL }
+    OPTIONAL { ?dist aimd2:modelWeightsURL    ?weightsURL }
+    OPTIONAL { ?dist aimd2:article50PolicyURL ?art50URL }
+}
+ORDER BY ?hop
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUERY 23 — UC-15: Cascading conflicts — aggregate all failures (✗ expected)
+# Traverses the 5-hop chain and aggregates all conflict types without
+# short-circuiting. Tests that the checker reports all conflicts.
+# Legal basis: EU AI Act Art. 53(1)(c); EU Commission Draft Guidelines
+#              19 May 2026; Meta Llama Community License §2; OWASP SCVS BOM.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SELECT ?dist ?actorType ?dataGenMethod ?deployCtx ?parentLicence
+       (IF(?actorType = "competitor" &&
+           STR(?parentLicence) = "https://example.com/policy/ProprietaryDistillationLicence",
+           "DISTILLATION_PROHIBITION", "") AS ?conflict1)
+       (IF(?dataGenMethod = "synthetic-from-proprietary-teacher", "ART53_DISCLOSURE_GAP", "") AS ?conflict2)
+       (IF(?deployCtx = "network", "NETWORK_COPYLEFT_CHECK", "") AS ?conflict3)
+WHERE {
+    VALUES ?dist {
+        dcat:ConsumerProductDist15 dcat:MoEMergeStepDist15
+        dcat:DistillationDist15    dcat:ClosedModelDist15
+        dcat:PropDataDist15
+    }
+    OPTIONAL {
+        ?dist aimd:derivedFromDistribution ?parent .
+        ?parent dct:license ?parentLicence .
+    }
+    OPTIONAL { ?dist aimd2:actorType           ?actorType }
+    OPTIONAL { ?dist aimd2:dataGenerationMethod ?dataGenMethod }
+    OPTIONAL { ?dist aimd2:deploymentContext    ?deployCtx }
+}
+ORDER BY ?dist

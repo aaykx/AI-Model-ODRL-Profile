@@ -1,0 +1,18 @@
+node_modules/
+.env
+*.log
+
+# WIDOCO-generated ontology docs — regenerate with: java -jar widoco.jar ...
+docs/ontology/
+
+# Internal working notes — not part of the published project
+dev-notes/
+
+# LaTeX build artefacts
+*.aux
+*.out
+*.toc
+*.log
+*.synctex.gz
+*.fls
+*.fdb_latexmk

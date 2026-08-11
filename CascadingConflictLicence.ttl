@@ -1,0 +1,75 @@
+﻿@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CascadingConflictLicence  (Use Case 15)
+#  Proprietary data → closed model → distillation → MoE merge → consumer product.
+#  This is the compound worst-case: stacks UC-6 (distillation prohibition) and
+#  UC-12 (Llama MAU threshold), both compounded with an Art. 53(1)(c) gap
+#  (fully undisclosed proprietary training data) and a potential high-risk
+#  classification trigger (EU Commission Draft Guidelines 19 May 2026).
+#
+#  The checker must aggregate ALL conflicts, not report only the first.
+#  OWASP Software Component Verification Standard / BOM Maturity Model
+#  provides the framework for assessing whether a chain with missing
+#  transparency at multiple hops can still be verified as a coherent BoM.
+#
+#  Expected compliance result: ✗ cascading, unresolvable — all three conflict
+#  types present simultaneously.
+#  Legal basis: EU AI Act Art. 53(1)(c); EU Commission Draft Guidelines
+#               19 May 2026 (Art. 6/Annex III high-risk); OWASP SCVS BOM.
+# ─────────────────────────────────────────────────────────────────────────────
+
+<https://example.com/policy/CascadingConflictLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "Cascading Conflict Licence — Compound UC-6 + UC-12 + Art.53 Worst Case" ;
+    dct:description "Stress-test policy for the five-hop worst-case chain. Encodes three simultaneous, unresolvable conflict triggers: (1) distillation prohibition from proprietary source (UC-6 pattern), (2) MoE expert obligation inheritance failure (UC-12 pattern), and (3) Art. 53(1)(c) training-data disclosure gap. The compliance checker must aggregate all three and not short-circuit on the first failure." ;
+    dct:created "2026-06-30"^^xsd:date ;
+
+    # ── PROHIBITION 1: distillation from proprietary source (UC-6 pattern) ───
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/ProprietaryTrainingData> ;
+        odrl:action  aimd2:AITraining ;
+        odrl:constraint [
+            odrl:leftOperand  aimd2:actorType ;
+            odrl:operator     odrl:eq ;
+            odrl:rightOperand <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#CompetitorModelTrainer> ;
+        ] ;
+    ] ;
+
+    # ── PROHIBITION 2: MoE merge without inheriting strictest expert licence ─
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/MoEStage> ;
+        odrl:action  aimd2:ModelSharing ;
+        odrl:constraint [
+            odrl:leftOperand  aimd2:downstreamLicence ;
+            odrl:operator     odrl:neq ;
+            odrl:rightOperand <https://example.com/policy/MoEMergedModelLicence> ;
+        ] ;
+    ] ;
+
+    # ── PROHIBITION 3: GPAI deployment without Art. 53 training-data disclosure
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/ConsumerProduct> ;
+        odrl:action  aimd2:AIInference ;
+        odrl:constraint [
+            odrl:leftOperand  aimd2:dataGenerationMethod ;
+            odrl:operator     odrl:eq ;
+            odrl:rightOperand <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#UndeclaredSynthetic> ;
+        ] ;
+    ] ;
+
+    # Obligations that cannot be satisfied given the upstream gaps
+    odrl:obligation [
+        odrl:action aimd2:ComplyWithArticle50 ;         # impossible: data provenance unknown
+    ] ;
+    odrl:obligation [
+        odrl:action aimd2:InheritSourceProhibitions ;   # impossible: proprietary chain undisclosed
+    ] ;
+
+    # Every hop in the chain propagates to the next — the unresolvable cascade
+    aimd2:propagatesObligationTo <https://example.com/policy/CascadingConflictLicence> .

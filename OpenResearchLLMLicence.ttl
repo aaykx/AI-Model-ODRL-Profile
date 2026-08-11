@@ -1,0 +1,71 @@
+﻿@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix dcat:  <https://www.w3.org/ns/dcat#> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  OpenResearchLLMLicence  (Use Case 1)
+#  Models a CC-BY 4.0 corpus used by a recognised research organisation to
+#  train an OSAID-compliant open LLM. DSM Directive Art. 3 research TDM
+#  exception applies; attribution obligation propagates downstream.
+#
+#  Expected compliance result: ✓ COMPLIANT
+#  Legal basis: CC-BY 4.0 §3(a); DSM Art. 3(1); OSAID 1.0 four freedoms.
+# ─────────────────────────────────────────────────────────────────────────────
+
+<https://example.com/policy/OpenResearchLLMLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "Open Research LLM Licence — CC-BY Attribution, Research TDM Exception" ;
+    dct:description "Permits AI training on CC-BY corpus by recognised research organisations under DSM Art. 3 TDM exception. Model output must be OSAID-compliant (weights shared openly) and attribution must propagate to downstream distributions." ;
+    dct:created "2026-06-30"^^xsd:date ;
+    dct:references <https://creativecommons.org/licenses/by/4.0/> ;
+
+    # ── PERMISSION: research AI training with attribution ────────────────────
+    odrl:permission [
+        odrl:target   <https://example.com/assets/AcademicCorpus> ;
+        odrl:assigner <https://example.com/TCD-TARA> ;
+        odrl:action   aimd2:AITraining ;
+
+        # Restricted to recognised research organisations (DSM Art. 3)
+        odrl:constraint [
+            odrl:leftOperand  aimd2:actorType ;
+            odrl:operator     odrl:eq ;
+            odrl:rightOperand aimd2:RecognisedResearchOrganisation ;
+        ] ;
+
+        # Non-commercial research only (distinguishes Art. 3 from Art. 4)
+        odrl:constraint [
+            odrl:leftOperand  aimd2:actorType ;
+            odrl:operator     odrl:neq ;
+            odrl:rightOperand aimd2:CommercialPurpose ;
+        ] ;
+
+        # ── Obligations on the trained model distribution ────────────────────
+        odrl:duty [
+            odrl:action aimd2:ModelSharing ;         # OSAID Share freedom
+        ] ;
+        odrl:duty [
+            odrl:action aimd2:InheritSourceLicence ; # attribution must propagate
+        ] ;
+        odrl:duty [
+            odrl:action aimd2:ComplyWithArticle50 ;  # EU AI Act Art. 50 transparency
+        ] ;
+    ] ;
+
+    # ── PROHIBITION: commercial redistribution ───────────────────────────────
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/AcademicCorpus> ;
+        odrl:action  aimd2:AITraining ;
+        odrl:constraint [
+            odrl:leftOperand  aimd2:actorType ;
+            odrl:operator     odrl:eq ;
+            odrl:rightOperand aimd2:CommercialPurpose ;
+        ] ;
+    ] ;
+
+    # Chain-propagation: attribution obligation must flow to all downstream policies
+    aimd2:propagatesObligationTo <https://example.com/policy/OpenResearchLLMLicence> .

@@ -1,0 +1,80 @@
+﻿@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  RAGPolicySetLicence  (Use Case 11)
+#  Retriever model + document corpus → Generator (RAG output).
+#  Two simultaneous licences must be satisfied at inference time:
+#  the retriever's model licence AND the corpus's data licence.
+#  IDS-RAM 4.0 Usage Control Language (multi-party ODRL + DCAT) and
+#  W3C ODRL PolicySet model the multi-asset composition.
+#
+#  Expected compliance result: Both policies must be satisfied;
+#  tests multi-asset composition at inference, not just training.
+#  Legal basis: IDS-RAM 4.0; W3C ODRL PolicySet/hasPolicy; Lewis et al. 2020.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── PolicySet: groups retriever licence + corpus licence ────────────────────
+<https://example.com/policy/RAGPolicySet>
+    a odrl:PolicySet ;
+    dct:title "RAG System PolicySet — Retriever + Corpus dual-licence composition" ;
+    dct:description "ODRL PolicySet grouping the retriever model licence and the corpus data licence. Both must be satisfied at inference time for a compliant RAG pipeline." ;
+    dct:created "2026-06-30"^^xsd:date ;
+    odrl:profile <https://example.com/policy/RetrieverModelLicence> ;
+    odrl:profile <https://example.com/policy/RAGCorpusLicence> .
+
+# ── Retriever model licence ──────────────────────────────────────────────────
+<https://example.com/policy/RetrieverModelLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "Retriever Model Licence (component of RAGPolicySet)" ;
+    dct:description "Permits inference-time retrieval; requires ragCorpusPolicy declaration." ;
+    dct:created "2026-06-30"^^xsd:date ;
+    odrl:permission [
+        odrl:target   <https://example.com/assets/RetrieverModel> ;
+        odrl:action   aimd2:AIInference ;
+        odrl:duty [
+            odrl:action aimd2:RAGIngestion ;    # corpus ingestion governed by corpus policy
+        ] ;
+    ] ;
+    aimd2:propagatesObligationTo <https://example.com/policy/RAGCorpusLicence> .
+
+# ── Corpus data licence ──────────────────────────────────────────────────────
+<https://example.com/policy/RAGCorpusLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "RAG Corpus Licence (component of RAGPolicySet)" ;
+    dct:description "Governs the document corpus indexed by the retriever. Attribution must appear in generated outputs that quote or paraphrase corpus content." ;
+    dct:created "2026-06-30"^^xsd:date ;
+    odrl:permission [
+        odrl:target   <https://example.com/assets/DocumentCorpus> ;
+        odrl:action   aimd2:RAGIngestion ;
+        odrl:duty [
+            odrl:action aimd2:InheritSourceLicence ; # attribution in output
+        ] ;
+        odrl:duty [
+            odrl:action aimd2:ComplyWithArticle50 ;
+        ] ;
+    ] ;
+    aimd2:propagatesObligationTo <https://example.com/policy/RAGPolicySet> .
+
+# ── Convenience alias: RAGPolicySetLicence → RAGPolicySet ───────────────────
+<https://example.com/policy/RAGPolicySetLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "RAG PolicySet Licence (alias)" ;
+    dct:description "Top-level alias for the RAGPolicySet; inherits the dual-licence composition obligations from RetrieverModelLicence and RAGCorpusLicence." ;
+    dct:created "2026-06-30"^^xsd:date ;
+    dct:references <https://example.com/policy/RAGPolicySet> ;
+    aimd2:propagatesObligationTo <https://example.com/policy/RAGPolicySetLicence> ;
+
+    # Art. 50 output transparency — applies to the full RAG pipeline
+    odrl:obligation [
+        odrl:action aimd2:ComplyWithArticle50 ;
+    ] ;
+
+    # Downstream corpus attribution must be carried in RAG outputs
+    odrl:obligation [
+        odrl:action aimd2:InheritSourceLicence ;
+    ] .

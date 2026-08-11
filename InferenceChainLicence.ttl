@@ -1,0 +1,57 @@
+﻿@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  InferenceChainLicence  (Use Case 13)
+#  Planner LLM (A) → structured plan → Executor LLM (B) → actions.
+#  This is inference-time chaining, NOT training. W3C ODRL AI Vocabulary
+#  distinguishes odrl:ai-augment (RAG/inference) from odrl:ai-training.
+#  The checker must NOT trigger InheritSourceLicence (a training obligation)
+#  for inference-time composition.
+#
+#  Expected compliance result: ✓ — inference chain is exempt from training
+#  obligations. This is a true-negative / anti-regression test.
+#  Legal basis: W3C ODRL AI Vocab ai-augment vs ai-training distinction;
+#               ReAct (Yao 2023); OpenAI Assistants API / MCP tool-use.
+# ─────────────────────────────────────────────────────────────────────────────
+
+<https://example.com/policy/InferenceChainLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "Inference Chain Licence — Planner→Executor Multi-Agent (No Training Obligations)" ;
+    dct:description "Governs runtime composition of separately licensed LLMs as planner and executor in a multi-agent chain. Because the planner's output is consumed at inference time (not used to train the executor), the InheritSourceLicence (copyleft) and InheritSourceProhibitions obligations do NOT apply. This licence formally establishes the exemption." ;
+    dct:created "2026-06-30"^^xsd:date ;
+
+    # ── PERMISSION: planner-executor inference composition ───────────────────
+    odrl:permission [
+        odrl:target   <https://example.com/assets/PlannerLLM> ;
+        odrl:assigner <https://example.com/InferenceChainOperator> ;
+        odrl:action   aimd2:AIInference ;
+        # No training-related constraints; only inference action permitted
+        odrl:duty [
+            odrl:action aimd2:ComplyWithArticle50 ; # output transparency
+        ] ;
+    ] ;
+
+    odrl:permission [
+        odrl:target   <https://example.com/assets/ExecutorLLM> ;
+        odrl:assigner <https://example.com/InferenceChainOperator> ;
+        odrl:action   aimd2:AIInference ;
+        odrl:duty [
+            odrl:action aimd2:ComplyWithArticle50 ;
+        ] ;
+    ] ;
+
+    # ── PROHIBITION: using planner outputs to train the executor ────────────
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/PlannerLLM> ;
+        odrl:action  aimd2:AITraining ;
+    ] ;
+
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/PlannerLLM> ;
+        odrl:action  aimd2:FineTuning ;
+    ] .

@@ -1,0 +1,109 @@
+﻿@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ProprietaryDistillationLicence  (Use Case 6)
+#
+#  Legal mechanism: CONTRACT LAW, not copyright.
+#  US Copyright Office Part 2 (2025) confirmed AI outputs are not copyrightable.
+#  The violation is purely contractual — the API user agreed to ToS that prohibit
+#  training competing models. Those ToS terms PROPAGATE into any derived model:
+#  by using the API you bind yourself and any artefact you create with it to the
+#  source's constraints.
+#
+#  This licence encodes that in two layers:
+#    Layer 1 — Prohibition: competitor actors may not train at all.
+#    Layer 2 — Constraint inheritance: ANY use of the API outputs for training
+#               binds the derived model to inherit ALL source prohibitions.
+#               The derived model's policy must carry the source's ToS
+#               restrictions forward (aimd2:InheritSourceProhibitions).
+#
+#  This is structurally analogous to GPL copyleft, but the legal basis is
+#  contract, not copyright.
+#
+#  Expected compliance result: ✗ CONFLICT — contractual prohibition violated
+#  Legal basis: Contractual ToS prohibition; US Copyright Office Part 2 (2025);
+#               Anthropic AUP (Feb 2026); OpenAI ToS §2(c).
+# ─────────────────────────────────────────────────────────────────────────────
+
+<https://example.com/policy/ProprietaryDistillationLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "Proprietary LLM API ToS — Competitor Distillation Prohibition with Constraint Inheritance" ;
+    dct:description "Formal ODRL encoding of the contractual prohibition in proprietary LLM API Terms of Service. Layer 1: competitor actors are prohibited from training on API outputs. Layer 2: ANY actor who trains on API outputs — even those not explicitly prohibited — must inherit ALL source ToS constraints into their derived model's policy. The derived model is contractually bound by the same terms as the API user. This models the real enforcement mechanism: it is contract law, not copyright." ;
+    dct:created "2026-06-30"^^xsd:date ;
+
+    # ── PERMISSION: standard API inference (non-competitors) ─────────────────
+    # Using the API for inference is permitted, BUT doing so creates a
+    # contractual relationship — the user is bound by the full ToS.
+    odrl:permission [
+        odrl:target   <https://example.com/assets/ProprietaryLLMAPI> ;
+        odrl:assigner <https://example.com/ProprietaryLLMProvider> ;
+        odrl:action   aimd2:AIInference ;
+        odrl:constraint [
+            odrl:leftOperand  aimd2:actorType ;
+            odrl:operator     odrl:neq ;
+            odrl:rightOperand <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#CompetitorModelTrainer> ;
+        ] ;
+        # Even for permitted inference: the user is contractually bound.
+        # Any outputs used downstream must carry source constraints.
+        odrl:duty [
+            odrl:action aimd2:InheritSourceProhibitions ;
+        ] ;
+    ] ;
+
+    # ── PROHIBITION: any AI training on API outputs (Layer 1 — broadest sweep) ─
+    # Regardless of actor type, using API outputs as training data violates ToS.
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/ProprietaryLLMAPI> ;
+        odrl:action  aimd2:AITraining ;
+    ] ;
+
+    # ── PROHIBITION: any fine-tuning on API outputs ───────────────────────────
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/ProprietaryLLMAPI> ;
+        odrl:action  aimd2:FineTuning ;
+    ] ;
+
+    # ── PROHIBITION: competitor distillation (Layer 1 — specific trigger) ────
+    # This is the specific signal checkDistillationProhibition() detects:
+    # actorType=competitor + this licence on the source = ToS violation.
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/ProprietaryLLMAPI> ;
+        odrl:action  aimd2:AITraining ;
+        odrl:constraint [
+            odrl:leftOperand  aimd2:actorType ;
+            odrl:operator     odrl:eq ;
+            odrl:rightOperand <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#CompetitorModelTrainer> ;
+        ] ;
+    ] ;
+
+    # ── OBLIGATION: constraint inheritance (Layer 2 — the core legal mechanism) ─
+    # This is the key addition. If someone trains on outputs of this API
+    # (in violation of the prohibition above), the derived model is contractually
+    # bound to inherit ALL of this source's ToS prohibitions. The derived model's
+    # policy must carry a derivedModelLicenceURI demonstrating that:
+    #   - the source model's prohibited use list is preserved
+    #   - no downstream actor can claim ignorance of the original ToS terms
+    # This is the machine-readable encoding of: "these ToS terms bind your
+    # derived model regardless of what licence you publish it under."
+    odrl:obligation [
+        odrl:action aimd2:InheritSourceProhibitions ;
+        # Evidence required: derivedModelLicenceURI pointing to a policy
+        # that carries this source's prohibitions forward.
+    ] ;
+
+    odrl:obligation [
+        odrl:action aimd2:ComplyWithArticle50 ;
+        # The derived model must disclose in its Art. 50/53 policy that
+        # it was trained on (or derived from) a proprietary teacher model.
+    ] ;
+
+    # Constraint inheritance propagation:
+    # This policy propagates to itself AND to any policy governing a derived model.
+    # Any downstream model that used this API's outputs as training data is bound
+    # by the same contractual constraints as the original API user.
+    aimd2:propagatesObligationTo <https://example.com/policy/ProprietaryDistillationLicence> .

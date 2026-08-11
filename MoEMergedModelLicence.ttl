@@ -1,0 +1,66 @@
+﻿@prefix odrl:  <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix aimd:  <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+@prefix aimd2: <https://raw.githubusercontent.com/aaykx/AI-Model-ODRL-Profile/main/AIMD_extended_v2.ttl#> .
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  MoEMergedModelLicence  (Use Case 12)
+#  Expert A + Expert B + Expert C → MoE merged model.
+#  Meta Llama Community License §2 imposes a 700M Monthly Active User
+#  threshold and EU deployment provisions. Jewitt et al. (2025) found
+#  licence stripping is especially prevalent at model-combination points.
+#  The "strictest constraint survives" principle must be enforced when
+#  merging experts under different licences.
+#
+#  Expected compliance result: ✗ if any expert's obligation (e.g. Llama MAU
+#  threshold, EU deployment clause) fails to propagate into the merged model.
+#  Legal basis: Meta Llama Community License §2; Mixtral (Jiang 2024);
+#               Jewitt et al. (2025); DeepSeek-R1 technical report.
+# ─────────────────────────────────────────────────────────────────────────────
+
+<https://example.com/policy/MoEMergedModelLicence>
+    a odrl:Policy, odrl:Set ;
+    dct:title "MoE Merged Model Licence — Strictest-Survives Expert Combination" ;
+    dct:description "Governs a Mixture-of-Experts model assembled from separately-licensed expert sub-models. The merged model's licence must be at least as restrictive as the most restrictive expert licence. Specifically: the Llama Community License MAU threshold (700M) and EU deployment clause must propagate into the merged model." ;
+    dct:created "2026-06-30"^^xsd:date ;
+    dct:references <https://www.llama.com/llama3/license/> ;
+
+    # ── PERMISSION: use merged model within Llama MAU threshold ─────────────
+    odrl:permission [
+        odrl:target   <https://example.com/assets/MoEMergedModel> ;
+        odrl:assigner <https://example.com/MoEAssembler> ;
+        odrl:action   aimd2:ModelSharing ;
+
+        # Llama Community License §2: >700M MAU requires separate commercial agreement
+        odrl:constraint [
+            odrl:leftOperand  odrl:count ;
+            odrl:operator     odrl:lt ;
+            odrl:rightOperand "700000000"^^xsd:integer ;
+        ] ;
+
+        odrl:duty [
+            odrl:action aimd2:InheritSourceLicence ;      # all expert licences must propagate
+        ] ;
+        odrl:duty [
+            odrl:action aimd2:InheritSourceProhibitions ; # prohibited uses from any expert
+        ] ;
+        odrl:duty [
+            odrl:action aimd2:ComplyWithArticle50 ;       # EU AI Act Art. 50 / 53
+        ] ;
+    ] ;
+
+    # ── PROHIBITION: deployment above MAU threshold without agreement ─────────
+    odrl:prohibition [
+        odrl:target  <https://example.com/assets/MoEMergedModel> ;
+        odrl:action  aimd2:ModelSharing ;
+        odrl:constraint [
+            odrl:leftOperand  odrl:count ;
+            odrl:operator     odrl:gteq ;
+            odrl:rightOperand "700000000"^^xsd:integer ;
+        ] ;
+    ] ;
+
+    # Chain-propagation: all expert policies propagate into merged model
+    aimd2:propagatesObligationTo <https://example.com/policy/MoEMergedModelLicence> .
